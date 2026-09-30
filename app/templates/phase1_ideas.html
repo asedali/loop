@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Idea Cards — LaunchLoop{% endblock %}
+{% block content %}
+<span class="badge phase1">Phase 1 — Idea Discovery</span>
+<h1>Candidate ideas</h1>
+<p class="subtitle">Pick one to start the validation loop, or extract more from different material.</p>
+
+{% for idea in ideas %}
+  <div class="card">
+    <h2 style="margin-top:0;">{{ idea.title }}</h2>
+    <p>{{ idea.commercial_framing }}</p>
+    <p class="muted">Built from: {{ idea.raw_claims }}</p>
+    <p class="muted">Strength signal: <strong>{{ idea.strength_signal }}</strong></p>
+    <form method="post" action="/phase1/select/{{ idea.id }}">
+      <button type="submit">Select this idea</button>
+    </form>
+  </div>
+{% endfor %}
+
+<a class="btn secondary" href="/phase1/new">Try different material</a>
+{% endblock %}

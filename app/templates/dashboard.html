@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — LaunchLoop{% endblock %}
+{% block content %}
+<h1>Your ventures</h1>
+<p class="subtitle">From idea to validated, fundable venture — three phases, real evidence.</p>
+
+{% if ventures %}
+  {% for v in ventures %}
+    <div class="card">
+      <span class="badge phase{{ v.phase }}">Phase {{ v.phase }}</span>
+      <span class="badge status-{{ v.status }}">{{ v.status }}</span>
+      <h2 style="margin-top:0.6rem;">{{ v.idea_title }}</h2>
+      <p class="muted">Cycle {{ v.cycle_count }} / {{ cycle_cap }}</p>
+      <a class="btn" href="/venture/{{ v.id }}">Open</a>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="card muted">No ventures yet — select an idea below to start Phase 2, or extract new ideas first.</div>
+{% endif %}
+
+<h2>Candidate ideas</h2>
+{% set candidates = ideas | selectattr("status", "equalto", "candidate") | list %}
+{% if candidates %}
+  {% for idea in candidates %}
+    <div class="card">
+      <span class="badge phase1">Idea</span>
+      <h2 style="margin-top:0.6rem;">{{ idea.title }}</h2>
+      <p>{{ idea.commercial_framing }}</p>
+      <p class="muted">Strength signal: {{ idea.strength_signal }}</p>
+      <form method="post" action="/phase1/select/{{ idea.id }}">
+        <button type="submit">Start validation loop</button>
+      </form>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="card muted">No candidate ideas yet.</div>
+{% endif %}
+
+<a class="btn secondary" href="/phase1/new">+ Extract new ideas</a>
+{% endblock %}

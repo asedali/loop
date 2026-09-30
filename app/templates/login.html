@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Log in — LaunchLoop{% endblock %}
+{% block content %}
+<div class="auth-box">
+  <h1>Log in</h1>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <label>Email</label>
+    <input type="email" name="email" required>
+    <label>Password</label>
+    <input type="password" name="password" required>
+    <button type="submit">Log in</button>
+  </form>
+  <p class="muted">No account yet? <a href="/signup">Sign up</a></p>
+</div>
+{% endblock %}

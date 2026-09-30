@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Sign up — LaunchLoop{% endblock %}
+{% block content %}
+<div class="auth-box">
+  <h1>Create your account</h1>
+  <p class="subtitle">One account per person — each of you gets your own private ideas and ventures.</p>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post" action="/signup">
+    <label>Email</label>
+    <input type="email" name="email" required>
+    <label>Password</label>
+    <input type="password" name="password" minlength="6" required>
+    <button type="submit">Sign up</button>
+  </form>
+  <p class="muted">Already have an account? <a href="/login">Log in</a></p>
+</div>
+{% endblock %}

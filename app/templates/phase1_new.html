@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Idea Discovery — LaunchLoop{% endblock %}
+{% block content %}
+<span class="badge phase1">Phase 1 — Idea Discovery</span>
+<h1>Paste your research material</h1>
+<p class="subtitle">A CV excerpt, an abstract, a thesis chapter, or just a description of your work. The system will extract candidate technical claims and cluster them into commercial Idea Cards.</p>
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+<form method="post" action="/phase1/extract">
+  <label>Research material</label>
+  <textarea name="raw_text" placeholder="e.g. My PhD work developed a low-power SWIR imaging sensor for..." required></textarea>
+  <button type="submit">Extract idea cards</button>
+</form>
+{% endblock %}

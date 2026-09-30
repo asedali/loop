@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ venture.idea_title }} — Validation Loop{% endblock %}
+{% block content %}
+<span class="badge phase2">Phase 2 — Validation Loop</span>
+<span class="badge status-{{ venture.status }}">{{ venture.status }}</span>
+<h1>{{ venture.idea_title }}</h1>
+<p class="subtitle">{{ venture.commercial_framing }}</p>
+<p class="muted">Cycle {{ venture.cycle_count }} / {{ cycle_cap }}</p>
+
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+<h2>Business Model Canvas status</h2>
+<div class="bmc-grid">
+  {% for el in bmc_elements %}
+    <div class="bmc-cell">
+      <div class="name">{{ el.element_name.replace('_', ' ') }}</div>
+      <span class="badge status-{{ el.status }}">{{ el.status }}</span>
+      {% if el.notes %}<div class="notes">{{ el.notes }}</div>{% endif %}
+    </div>
+  {% endfor %}
+</div>
+
+{% if venture.status == "killed" %}
+  <div class="card">
+    <strong>This venture was killed.</strong>
+    <p class="muted">Evidence disconfirmed the idea with no viable pivot. The idea is back in your candidate list on the dashboard if you want to try a different direction.</p>
+  </div>
+{% elif venture.status == "paused" %}
+  <div class="card">
+    <strong>Cycle cap reached ({{ cycle_cap }} cycles).</strong>
+    <p class="muted">The loop is designed to force an explicit decision at this point rather than run indefinitely. You can resume for more cycles if you believe the idea still has a viable path.</p>
+    <form method="post" action="/venture/{{ venture.id }}/resume">
+      <button type="submit" class="secondary">Resume anyway</button>
+    </form>
+  </div>
+{% endif %}
+
+{% if current_cycle %}
+  <h2>Cycle {{ current_cycle.cycle_number }}</h2>
+
+  {% if awaiting_results %}
+    <form method="post" action="/venture/{{ venture.id }}/cycle/{{ current_cycle.id }}/log">
+      {% for todo in current_todos %}
+        <div class="todo-item">
+          <strong>{{ todo.task_type.replace('_',' ') | title }}</strong> — targets <em>{{ todo.target_element.replace('_',' ') }}</em>
+          <p>{{ todo.description }}</p>
+          <label>Outcome (what actually happened)</label>
+          <textarea name="outcome_{{ loop.index0 }}" required></textarea>
+          <label>Sample size (people talked to, sign-ups, etc.)</label>
+          <input type="text" name="sample_size_{{ loop.index0 }}" placeholder="e.g. 5 interviews">
+        </div>
+      {% endfor %}
+      <button type="submit">Log results &amp; analyze</button>
+    </form>
+
+  {% elif awaiting_analysis %}
+    <div class="card">
+      <p>Results logged. Analysis didn't complete last time.</p>
+      <form method="post" action="/venture/{{ venture.id }}/cycle/{{ current_cycle.id }}/retry-analysis">
+        <button type="submit">Retry analysis</button>
+      </form>
+    </div>
+
+  {% elif current_analysis %}
+    <div class="card">
+      <p><strong>Recommendation: {{ current_analysis.recommendation | upper }}</strong></p>
+      <p>{{ current_analysis.recommendation_reasoning }}</p>
+      {% if current_analysis.pivot_suggestion %}
+        <p class="muted">Suggested pivot: {{ current_analysis.pivot_suggestion }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endif %}
+
+{% if can_start_new_cycle %}
+  <form method="post" action="/venture/{{ venture.id }}/cycle/new">
+    <button type="submit">Generate cycle {{ venture.cycle_count + 1 }} TODOs</button>
+  </form>
+{% endif %}
+
+{% if cycles|length > 0 %}
+  <h2>Cycle history</h2>
+  {% for c in cycles %}
+    <div class="card">
+      <strong>Cycle {{ c.cycle_number }}</strong>
+      {% if c.decision %}<span class="muted"> — decision: {{ c.decision }}</span>{% endif %}
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}
