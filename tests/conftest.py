@@ -18,6 +18,13 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine, text
 
+# app.main refuses to import without a session secret, which is correct in
+# production but means a fresh clone cannot even collect the suite. Set a
+# throwaway before the app package is imported (conftest runs first), so the
+# tests depend on this file rather than on whoever's .env happens to be around.
+os.environ.setdefault("SESSION_SECRET_KEY", "test-only-not-a-real-secret")
+os.environ.setdefault("LAUNCHLOOP_DEBUG", "1")
+
 from app import db
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
