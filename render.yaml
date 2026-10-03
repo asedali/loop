@@ -1,0 +1,69 @@
+# Render blueprint for LaunchLoop.
+#
+#   1. Push this repo to GitHub, then in Render: New -> Blueprint -> pick the repo.
+#      Render reads this file and creates the service.
+#   2. Render will show the three "sync: false" values as prompts. Paste:
+#        DATABASE_URL      the Supabase SESSION POOLER (port 5432) URI
+#        LLM_API_KEY       your provider key
+#        LLM_BASE_URL      https://opencode.ai/zen/v1
+#      SESSION_SECRET_KEY is generated for you.
+#   3. First deploy runs the app, which applies migrations on boot.
+#
+# Set DATABASE_URL to the session pooler (5432), not the transaction pooler
+# (6543): pgbouncer in transaction mode breaks the server-side prepared
+# statements SQLAlchemy sends, which surfaces as intermittent runtime errors
+# rather than a clean failure at startup.
+services:
+  - type: web
+    name: launchloop
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    # /healthz does a real Postgres round-trip, so a database outage fails the
+    # health check rather than serving 500s.
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      # --- secrets: fill these in when Render prompts ---
+      - key: DATABASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+
+      # --- generated ---
+      - key: SESSION_SECRET_KEY
+        generateValue: true
+
+      # --- plain config ---
+      - key: SESSION_HTTPS_ONLY
+        value: "1"
+      - key: LLM_PROVIDER
+        value: zen
+      - key: LLM_MODEL
+        value: space-bunny-free
+      - key: LLM_MONTHLY_LIMIT_PER_USER
+        value: "500"
+      - key: LLM_JSON_MODE
+        value: "1"
+      - key: LLM_TIMEOUT
+        value: "60"
+      - key: LOGIN_WINDOW_MINUTES
+        value: "15"
+      - key: MAX_FAILED_LOGINS
+        value: "8"
+      - key: MIN_PASSWORD_LENGTH
+        value: "8"
+      - key: IDEA_CARD_LIMIT
+        value: "12"
+      - key: SEGMENT_CAP
+        value: "3"
+      - key: VENTURE_RUN_BACKSTOP
+        value: "27"
+      - key: LLM_MAX_ATTEMPTS
+        value: "3"
+      - key: LLM_MAX_OUTPUT_TOKENS
+        value: "2048"

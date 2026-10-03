@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.git/
+.gitignore
+# .env holds the real DATABASE_URL password and LLM_API_KEY. `.env*` rather
+# than `.env` + `.env.*`, because editor and Finder backups like ".env copy"
+# contain the same live secrets and match neither of those.
+.env*
+!.env.example
+# The SQLite file is only a migration source; it must never reach an image.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+venv/
+.venv/
+tests/
+scripts/
+.pytest_cache/
+README.md
+fly.toml
+render.yaml
+.DS_Store

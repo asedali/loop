@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+# Without this, bare `pytest` cannot import the app package and you have to
+# remember `python -m pytest`.
+pythonpath = ["."]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:starlette.*",
+]

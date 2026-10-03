@@ -2,8 +2,9 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
-.env
-.env.*
+# `.env*` rather than `.env` + `.env.*`: editor and Finder backups like
+# ".env copy" contain the same live secrets and match neither of those.
+.env*
 !.env.example
 *.db
 *.db-journal

@@ -1,23 +1,54 @@
 # Fly.io app config for LaunchLoop MVP.
 # Replace `app` with a unique name before first deploy (fly.io will suggest one too).
 app = "launchloop-mvp"
-primary_region = "iad"  # change to whichever region is closest to you/your friends
+primary_region = "iad"  # keep this in the same region as your Supabase project
 
 [build]
 
-[env]
-  LAUNCHLOOP_DB_PATH = "/data/launchloop.db"
+# Runs once per deploy, before new machines take traffic. The app itself also
+# runs migrations at boot under an advisory lock, so a deploy that skips this
+# still converges — this just makes the ordering explicit.
+[deploy]
+  release_command = "alembic upgrade head"
 
-[[mounts]]
-  source = "launchloop_data"
-  destination = "/data"
+[env]
+  # Fly terminates TLS and redirects to it, so the cookie can be https-only.
+  SESSION_HTTPS_ONLY = "1"
+  LLM_BASE_URL = "https://opencode.ai/zen/v1"
+  LLM_PROVIDER = "zen"
+  LLM_MODEL = "space-bunny-free"
+  LLM_MONTHLY_LIMIT_PER_USER = "500"
+  LLM_JSON_MODE = "1"
+  # Retry budget per LLM call, and the per-response token ceiling.
+  LLM_MAX_ATTEMPTS = "3"
+  LLM_MAX_OUTPUT_TOKENS = "2048"
+  # Auth / login throttling.
+  MIN_PASSWORD_LENGTH = "8"
+  LOGIN_WINDOW_MINUTES = "15"
+  MAX_FAILED_LOGINS = "8"
+  # Phase 1.
+  IDEA_CARD_LIMIT = "12"
+  # Phase 2 — the per-block validation loop.
+  SEGMENT_CAP = "3"
+  VENTURE_RUN_BACKSTOP = "27"
+  # DATABASE_URL is a secret, never an [env] value:
+  #   fly secrets set DATABASE_URL='postgresql://...:5432/postgres?sslmode=require'
+
+# No [[mounts]] — the SQLite volume is gone. Nothing is stored on the machine.
+
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/healthz"
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = false   # keep the machine warm; SQLite + auto-stop can lose the mount's cache briefly on cold start
+  auto_stop_machines = true    # safe now: state lives in Postgres, not on disk
   auto_start_machines = true
-  min_machines_running = 1
+  min_machines_running = 0
 
 [[vm]]
   size = "shared-cpu-1x"
