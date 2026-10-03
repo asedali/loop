@@ -1,21 +1,37 @@
 {% extends "base.html" %}
 {% block title %}Idea Cards — LaunchLoop{% endblock %}
 {% block content %}
-<span class="badge phase1">Phase 1 — Idea Discovery</span>
+<div class="eyebrow">Phase 1 — Idea Discovery</div>
 <h1>Candidate ideas</h1>
-<p class="subtitle">Pick one to start the validation loop, or extract more from different material.</p>
+<p class="subtitle">Pick one to start the validation loop, or go back and extract from different
+material. Starting a loop creates a venture with a fresh, untested canvas.</p>
 
-{% for idea in ideas %}
-  <div class="card">
-    <h2 style="margin-top:0;">{{ idea.title }}</h2>
-    <p>{{ idea.commercial_framing }}</p>
-    <p class="muted">Built from: {{ idea.raw_claims }}</p>
-    <p class="muted">Strength signal: <strong>{{ idea.strength_signal }}</strong></p>
-    <form method="post" action="/phase1/select/{{ idea.id }}">
-      <button type="submit">Select this idea</button>
-    </form>
+{% if ideas %}
+  <div class="stack-lg" style="margin-top:1.75rem">
+    {% for idea in ideas %}
+      <div class="card hoverable">
+        <div class="row">
+          <span class="badge phase1">Idea card</span>
+          <span class="chip mono">signal: {{ idea.strength_signal }}</span>
+        </div>
+        <h3 style="margin:.8rem 0 .35rem;font-size:1.1rem">{{ idea.title }}</h3>
+        <p style="color:var(--text-2)">{{ idea.commercial_framing }}</p>
+        {% if idea.raw_claims %}
+          <p class="muted-sm" style="margin-top:.6rem">Built from: {{ idea.raw_claims }}</p>
+        {% endif %}
+        <form method="post" action="/phase1/select/{{ idea.id }}" style="margin-top:1.1rem">
+          <button type="submit" class="p2">Select &amp; start validation loop →</button>
+        </form>
+      </div>
+    {% endfor %}
   </div>
-{% endfor %}
+{% else %}
+  <div class="empty" style="margin-top:1.75rem">
+    <div class="empty-title">No candidates yet</div>
+    <p>Extract ideas from your research material to get started.</p>
+    <div style="margin-top:1.1rem"><a class="btn p1" href="/phase1/new">+ Extract ideas</a></div>
+  </div>
+{% endif %}
 
-<a class="btn secondary" href="/phase1/new">Try different material</a>
+<div style="margin-top:1.75rem"><a class="btn secondary" href="/phase1/new">Try different material</a></div>
 {% endblock %}

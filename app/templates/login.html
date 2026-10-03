@@ -1,16 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Log in — LaunchLoop{% endblock %}
+{% block main_class %}auth-shell{% endblock %}
 {% block content %}
 <div class="auth-box">
-  <h1>Log in</h1>
+  <div class="auth-brand">
+    <a class="brand" href="/"><span class="mark">L</span> LaunchLoop</a>
+  </div>
+  <h1 style="text-align:center">Welcome back</h1>
+  <p class="muted" style="text-align:center;margin-top:0">Log in to your ventures.</p>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   <form method="post" action="/login">
-    <label>Email</label>
-    <input type="email" name="email" required>
-    <label>Password</label>
-    <input type="password" name="password" required>
-    <button type="submit">Log in</button>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" autofocus>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" name="password" required autocomplete="current-password">
+    </div>
+    <button type="submit" class="block lg">Log in</button>
   </form>
-  <p class="muted">No account yet? <a href="/signup">Sign up</a></p>
+  <p class="muted auth-switch">No account yet? <a href="/signup">Sign up</a></p>
 </div>
 {% endblock %}

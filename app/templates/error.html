@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong — LaunchLoop{% endblock %}
+{% block main_class %}auth-shell{% endblock %}
+{% block content %}
+<div class="auth-box" style="max-width:460px">
+  <div class="row" style="justify-content:center;margin-bottom:1rem">
+    <span class="badge status-killed">error {{ status_code }}</span>
+  </div>
+  <h1 style="text-align:center">Something went wrong</h1>
+  <p class="muted" style="text-align:center">
+    This is a bug on our side, not something you did wrong.
+    {% if user %}Your ideas and ventures are still saved.{% else %}Nothing was lost.{% endif %}
+  </p>
+
+  {% if detail %}
+    <div class="callout warn mono" style="font-size:.78rem;overflow-wrap:anywhere">{{ detail }}</div>
+  {% endif %}
+
+  <div class="row" style="margin-top:1.3rem">
+    <a class="btn block" href="{{ '/dashboard' if user else '/login' }}">Back to safety</a>
+  </div>
+  <p class="muted auth-switch">
+    If this keeps happening, the details are in the server log.
+  </p>
+</div>
+{% endblock %}

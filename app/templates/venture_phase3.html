@@ -1,57 +1,101 @@
 {% extends "base.html" %}
+{% from "macros.html" import business_model_canvas %}
 {% block title %}{{ venture.idea_title }} — Launch Strategy{% endblock %}
+{% block main_class %}wide{% endblock %}
 {% block content %}
-<span class="badge phase3">Phase 3 — Launch Strategy</span>
-<span class="badge status-{{ venture.status }}">{{ venture.status }}</span>
-<h1>{{ venture.idea_title }}</h1>
-<p class="subtitle">Validated — all five Business Model Canvas elements confirmed by real-world evidence.</p>
 
-<h2>Validated evidence</h2>
-<div class="bmc-grid">
-  {% for el in bmc_elements %}
-    <div class="bmc-cell">
-      <div class="name">{{ el.element_name.replace('_', ' ') }}</div>
-      <span class="badge status-{{ el.status }}">{{ el.status }}</span>
-      {% if el.notes %}<div class="notes">{{ el.notes }}</div>{% endif %}
-    </div>
-  {% endfor %}
+<div class="row">
+  <span class="badge phase3"><span class="dot"></span>Phase 3 — Go to Market</span>
+  <span class="badge status-{{ venture.status }}">{{ venture.status }}</span>
 </div>
+<h1>{{ venture.idea_title }}</h1>
+<p class="subtitle">{{ resolved }} of {{ total_segments }} blocks resolved by real-world evidence
+rather than assumption — here's what that evidence supports commercially.</p>
+
+<h2><span class="h2-num">01</span> Canvas</h2>
+{{ business_model_canvas(segments, venture.id) }}
+
+{% if gaps %}
+  <div class="card" style="margin-top:1.25rem">
+    <div class="row"><span class="badge o-parked"><span class="dot"></span>{{ gaps | length }} parked</span></div>
+    <h3 style="margin-top:.6rem">Known gaps in this model</h3>
+    <p class="muted">These blocks were tested and did not hold. The plan below has to work around
+      them rather than assume they are solved.</p>
+    {% for g in gaps %}
+      <div class="gap-row">
+        <a class="chip" href="/venture/{{ venture.id }}/segment/{{ g.segment }}">{{ g.label }}</a>
+        <span>{{ g.note or 'no workaround recorded' }}</span>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
 
 {% if not strategy %}
-  <div class="card">
-    <p>Generate your funding matches, go-to-market channels, and action plan from the validated evidence above.</p>
-    <form method="post" action="/venture/{{ venture.id }}/phase3/generate">
-      <button type="submit">Generate launch strategy</button>
+  <div class="card" style="margin-top:2rem">
+    <h3>Generate the go-to-market package</h3>
+    <p class="muted">Funding categories that fit this idea's domain and stage, customer-acquisition
+      channels derived from your own channel and customer evidence, and a sequenced plan to your
+      first real milestone.</p>
+    <form method="post" action="/venture/{{ venture.id }}/phase3/generate" data-thinking style="margin-top:1.2rem">
+      <button type="submit" class="p3 lg">Generate launch strategy →</button>
     </form>
   </div>
 {% else %}
-  <h2>Funding matches</h2>
-  <p class="muted">Category-level guidance — not a live grants/VC directory.</p>
-  {% for f in strategy.funding_matches %}
-    <div class="strategy-item">
-      <strong>{{ f.name }}</strong>
-      <p class="muted">{{ f.why_it_fits }}</p>
-    </div>
-  {% endfor %}
+  <h2><span class="h2-num">02</span> Funding matches</h2>
+  <div class="callout warn">
+    <strong>Advisory only — verify every item before you act on it.</strong>
+    <p>These are funding <em>programme categories</em> the model inferred from your canvas. This
+      is not a live grants or VC database. Programme names, eligibility rules, deadlines and
+      amounts change without notice, and a language model can invent plausible-sounding ones.
+      Treat this as a starting point for your own research — always check the funder's own site.</p>
+  </div>
+  <div class="stack">
+    {% for f in strategy.funding_matches %}
+      <div class="strat-item">
+        <span class="strat-num">{{ loop.index }}</span>
+        <div class="strat-body">
+          <div class="item-title">{{ f.name }}</div>
+          <p>{{ f.why_it_fits }}</p>
+          <p class="disclaimer">Unverified — confirm the programme exists and that you're eligible.</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
 
-  <h2>Go-to-market channels</h2>
-  {% for g in strategy.gtm_channels %}
-    <div class="strategy-item">
-      <strong>{{ g.channel }}</strong>
-      <p class="muted">{{ g.why_this_fits }}</p>
-    </div>
-  {% endfor %}
+  <h2><span class="h2-num">03</span> Go-to-market channels</h2>
+  <p class="muted" style="margin-top:-.5rem">Derived from your own customer and channel evidence,
+    not generic startup advice.</p>
+  <div class="stack">
+    {% for g in strategy.gtm_channels %}
+      <div class="strat-item">
+        <span class="strat-num">{{ loop.index }}</span>
+        <div class="strat-body">
+          <div class="item-title">{{ g.channel }}</div>
+          <p>{{ g.why_this_fits }}</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
 
-  <h2>Action plan</h2>
-  {% for a in strategy.action_plan %}
-    <div class="strategy-item">
-      <span class="badge phase3">{{ a.milestone_type }}</span>
-      <p>{{ a.step }}</p>
-    </div>
-  {% endfor %}
+  <h2><span class="h2-num">04</span> Action plan</h2>
+  <p class="muted" style="margin-top:-.5rem">Sequenced to your first real milestone — a grant
+    submitted, a pilot signed, or a paying customer.</p>
+  <div class="stack">
+    {% for a in strategy.action_plan %}
+      <div class="strat-item">
+        <span class="strat-num">{{ loop.index }}</span>
+        <div class="strat-body">
+          <div class="row">
+            <span class="badge phase3">{{ a.milestone_type }}</span>
+            <span class="item-title" style="margin:0">{{ a.step }}</span>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
 
-  <form method="post" action="/venture/{{ venture.id }}/phase3/generate">
-    <button type="submit" class="secondary">Regenerate</button>
+  <form method="post" action="/venture/{{ venture.id }}/phase3/generate" data-thinking style="margin-top:1.75rem">
+    <button type="submit" class="secondary">↻ Regenerate strategy</button>
   </form>
 {% endif %}
 {% endblock %}

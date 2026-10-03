@@ -1,0 +1,104 @@
+{# Shared UI partials. The Business Model Canvas lives here so Phase 2 and
+   Phase 3 render the identical component instead of two drifting copies. #}
+
+{# ---- one canvas block. Every one of the nine is now tracked and clickable,
+        which is why the 'untracked' branch is gone. ---- #}
+{% macro cell(idx, key, label, hero=false, venture_id=None) %}
+  {% set el = idx.get(key) %}
+  {# Once a block is resolved its note is the most informative text, so it wins
+     over the hypothesis; before that, the hypothesis is what you want to see. #}
+  {% set body = (el.outcome_note if el and el.outcome in ('passed', 'parked', 'failed')
+                 else el.hypothesis if el else None) or (el.notes if el else None) %}
+  <a class="bmc-cell s-{{ el.status if el else 'untested' }} o-{{ el.outcome if el else 'pending' }}{% if hero %} hero{% endif %}"
+     {% if venture_id %}href="/venture/{{ venture_id }}/segment/{{ key }}"{% endif %}>
+    <div class="name">{{ label }}</div>
+    {% if el %}
+      {% if body %}<div class="notes">{{ body[:90] }}</div>{% endif %}
+      <div class="status-row">
+        <span class="badge o-{{ el.outcome }}"><span class="dot"></span>{{ el.outcome }}</span>
+        <span class="muted-sm">{{ el.cycle_count }}/{{ el.max_cycles }} runs</span>
+      </div>
+    {% endif %}
+  </a>
+{% endmacro %}
+
+
+{# ---- the full 9-block canvas, in the canonical Osterwalder layout ---- #}
+{% macro business_model_canvas(segments, venture_id=None) %}
+  {% set idx = {} %}
+  {% for el in segments %}
+    {% set _ = idx.update({el.element_name: el}) %}
+  {% endfor %}
+  <div class="bmc-wrap">
+    <div class="bmc">
+      {{ cell(idx, 'key_partners', 'Key Partners', venture_id=venture_id) }}
+      {{ cell(idx, 'problem', 'Problem & Key Activities', venture_id=venture_id) }}
+      {{ cell(idx, 'key_resources', 'Key Resources', venture_id=venture_id) }}
+      {{ cell(idx, 'value_prop', 'Value Propositions', hero=true, venture_id=venture_id) }}
+      {{ cell(idx, 'customer_relationships', 'Customer Relationships', venture_id=venture_id) }}
+      {{ cell(idx, 'customer', 'Customer Segments', venture_id=venture_id) }}
+      {{ cell(idx, 'channel', 'Channels', venture_id=venture_id) }}
+
+      {# bottom financial row: cost structure and revenue streams #}
+      <div class="bmc-row-financial">
+        {{ cell(idx, 'cost_structure', 'Cost Structure', venture_id=venture_id) }}
+        {{ cell(idx, 'revenue', 'Revenue Streams', venture_id=venture_id) }}
+      </div>
+    </div>
+
+    <div class="bmc-legend">
+      <span class="k"><i style="background:var(--confirmed)"></i>passed</span>
+      <span class="k"><i style="background:var(--mixed)"></i>in progress</span>
+      <span class="k"><i style="background:var(--disconfirmed)"></i>parked</span>
+      <span class="k"><i style="background:var(--untested)"></i>not started</span>
+      <span class="k" style="margin-left:auto">Click any block to work on it.</span>
+    </div>
+  </div>
+{% endmacro %}
+
+
+{# ---- phase / status badge pair used at the top of every venture page ---- #}
+{% macro venture_header(venture, phase, phase_label) %}
+  <div class="row">
+    <span class="badge phase{{ phase }}"><span class="dot"></span>{{ phase_label }}</span>
+    <span class="badge status-{{ venture.status }}">{{ venture.status }}</span>
+  </div>
+  <h1>{{ venture.idea_title }}</h1>
+{% endmacro %}
+
+
+{# ---- venture progress rail: runs used against the backstop ---- #}
+{% macro cycle_rail(cycle_count, max_cycles, phase=2) %}
+  {% set pct = ((cycle_count / max_cycles) * 100) | round | int if max_cycles else 0 %}
+  <div class="rail">
+    <div class="rail-track">
+      <div class="rail-fill{% if phase == 3 %} p3{% endif %}" style="width:{{ [pct, 100] | min }}%"></div>
+    </div>
+    <span class="rail-num">{{ cycle_count }} / {{ max_cycles }} runs</span>
+  </div>
+{% endmacro %}
+
+
+{# ---- the nine-segment board, in recommended order. This is the primary
+        navigation of Phase 2: what is done, what is next, what got parked. ---- #}
+{% macro segment_board(segments, venture, recommended=None) %}
+  <div class="segment-board">
+    {% for seg in segments %}
+      {% set is_focus = recommended and seg.element_name == recommended.element_name %}
+      <a class="segment-row o-{{ seg.outcome }}{% if is_focus %} focus{% endif %}"
+         href="/venture/{{ venture.id }}/segment/{{ seg.element_name }}">
+        <span class="seg-num">{{ loop.index }}</span>
+        <span class="seg-main">
+          <span class="seg-label">{{ seg.label }}</span>
+          {% if seg.hypothesis %}<span class="seg-hyp">{{ seg.hypothesis[:110] }}</span>
+          {% elif seg.outcome == 'pending' %}<span class="seg-hyp muted">not tested yet</span>{% endif %}
+        </span>
+        <span class="seg-side">
+          <span class="badge sev-{{ seg.severity }}">{{ seg.severity }}</span>
+          <span class="badge o-{{ seg.outcome }}"><span class="dot"></span>{{ seg.outcome }}</span>
+          <span class="muted-sm">{{ seg.cycle_count }}/{{ seg.max_cycles }}</span>
+        </span>
+      </a>
+    {% endfor %}
+  </div>
+{% endmacro %}

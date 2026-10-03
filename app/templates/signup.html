@@ -1,17 +1,27 @@
 {% extends "base.html" %}
 {% block title %}Sign up — LaunchLoop{% endblock %}
+{% block main_class %}auth-shell{% endblock %}
 {% block content %}
 <div class="auth-box">
-  <h1>Create your account</h1>
-  <p class="subtitle">One account per person — each of you gets your own private ideas and ventures.</p>
+  <div class="auth-brand">
+    <a class="brand" href="/"><span class="mark">L</span> LaunchLoop</a>
+  </div>
+  <h1 style="text-align:center">Create your account</h1>
+  <p class="muted" style="text-align:center;margin-top:0">One account per person — your ideas
+    and ventures stay private to you.</p>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   <form method="post" action="/signup">
-    <label>Email</label>
-    <input type="email" name="email" required>
-    <label>Password</label>
-    <input type="password" name="password" minlength="6" required>
-    <button type="submit">Sign up</button>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" name="email" value="{{ email or '' }}" required autocomplete="email" autofocus>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" name="password" minlength="8" maxlength="72" required autocomplete="new-password">
+      <div class="hint">At least 8 characters.</div>
+    </div>
+    <button type="submit" class="block lg">Create account</button>
   </form>
-  <p class="muted">Already have an account? <a href="/login">Log in</a></p>
+  <p class="muted auth-switch">Already have an account? <a href="/login">Log in</a></p>
 </div>
 {% endblock %}

@@ -1,40 +1,85 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — LaunchLoop{% endblock %}
+{% from "macros.html" import cycle_rail %}
+{% block title %}Ventures — LaunchLoop{% endblock %}
 {% block content %}
-<h1>Your ventures</h1>
-<p class="subtitle">From idea to validated, fundable venture — three phases, real evidence.</p>
 
-{% if ventures %}
-  {% for v in ventures %}
-    <div class="card">
-      <span class="badge phase{{ v.phase }}">Phase {{ v.phase }}</span>
-      <span class="badge status-{{ v.status }}">{{ v.status }}</span>
-      <h2 style="margin-top:0.6rem;">{{ v.idea_title }}</h2>
-      <p class="muted">Cycle {{ v.cycle_count }} / {{ cycle_cap }}</p>
-      <a class="btn" href="/venture/{{ v.id }}">Open</a>
-    </div>
-  {% endfor %}
-{% else %}
-  <div class="card muted">No ventures yet — select an idea below to start Phase 2, or extract new ideas first.</div>
+<div class="row between">
+  <div>
+    <div class="eyebrow">Workspace</div>
+    <h1>Your ventures</h1>
+  </div>
+  <a class="btn p1" href="/phase1/new">+ Extract new ideas</a>
+</div>
+<p class="subtitle">Three phases: extract an idea, prove it against real-world evidence,
+then take the validated version to market.</p>
+
+{% if quota_limit %}
+  <p class="muted-sm" style="margin-top:.9rem">
+    {{ quota_used }} of {{ quota_limit }} AI calls used this month.
+    {% if quota_used >= quota_limit %}<strong style="color:var(--mixed)">Cap reached — new AI calls are blocked until next month.</strong>{% endif %}
+  </p>
 {% endif %}
 
-<h2>Candidate ideas</h2>
+<h2><span class="h2-num">01</span> Active ventures</h2>
+{% if ventures %}
+  <div class="grid-2">
+    {% for v in ventures %}
+      {% set segs = bmc_elements.get(v.id, []) %}
+      {# resolved counts parked too: a documented gap is a finished block. #}
+      {% set done = segs | selectattr('outcome', 'in', ['passed', 'parked']) | list | length %}
+      {% set total = segs | length %}
+      {% set parked = segs | selectattr('outcome', 'equalto', 'parked') | list | length %}
+      <a class="card hoverable" href="/venture/{{ v.id }}" style="text-decoration:none;color:inherit;display:block">
+        <div class="row">
+          <span class="badge phase{{ v.phase }}"><span class="dot"></span>Phase {{ v.phase }}</span>
+          <span class="badge status-{{ v.status }}">{{ v.status }}</span>
+          <span class="spacer"></span>
+          <span class="muted-sm">{{ done }}/{{ total }} blocks resolved{% if parked %} · {{ parked }} parked{% endif %}</span>
+        </div>
+        <h3 style="margin:.75rem 0 .3rem">{{ v.idea_title }}</h3>
+        <p class="muted" style="margin:0">{{ v.commercial_framing[:130] }}{% if v.commercial_framing | length > 130 %}…{% endif %}</p>
+        {% if v.pivot_note %}<p class="muted-sm" style="margin-top:.5rem">↳ pivoted from an earlier hypothesis</p>{% endif %}
+        {{ cycle_rail(v.cycle_count, v.max_cycles, v.phase) }}
+        <div class="row" style="margin-top:.9rem">
+          <span class="btn secondary">Open venture →</span>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">
+    <div class="empty-title">No ventures yet</div>
+    <p>Extract ideas from your research material, then pick one to start the validation loop.</p>
+    <div style="margin-top:1.1rem"><a class="btn p1" href="/phase1/new">Start with an idea</a></div>
+  </div>
+{% endif %}
+
+<h2><span class="h2-num">02</span> Candidate ideas</h2>
 {% set candidates = ideas | selectattr("status", "equalto", "candidate") | list %}
 {% if candidates %}
-  {% for idea in candidates %}
-    <div class="card">
-      <span class="badge phase1">Idea</span>
-      <h2 style="margin-top:0.6rem;">{{ idea.title }}</h2>
-      <p>{{ idea.commercial_framing }}</p>
-      <p class="muted">Strength signal: {{ idea.strength_signal }}</p>
-      <form method="post" action="/phase1/select/{{ idea.id }}">
-        <button type="submit">Start validation loop</button>
-      </form>
-    </div>
-  {% endfor %}
+  <div class="grid-2">
+    {% for idea in candidates %}
+      <div class="card">
+        <div class="row">
+          <span class="badge phase1">Idea</span>
+          <span class="chip mono">signal: {{ idea.strength_signal }}</span>
+        </div>
+        <h3 style="margin:.75rem 0 .3rem">{{ idea.title }}</h3>
+        <p class="muted" style="margin:0 0 .5rem">{{ idea.commercial_framing }}</p>
+        {% if idea.raw_claims %}<p class="muted-sm">Built from: {{ idea.raw_claims }}</p>{% endif %}
+        <form method="post" action="/phase1/select/{{ idea.id }}" style="margin-top:1rem">
+          <button type="submit" class="p2 block">Start validation loop →</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
 {% else %}
-  <div class="card muted">No candidate ideas yet.</div>
+  <div class="empty">
+    <div class="empty-title">No candidate ideas</div>
+    <p>Paste a CV excerpt, an abstract, or a thesis chapter and the model will extract
+       commercially-viable ideas from it.</p>
+    <div style="margin-top:1.1rem"><a class="btn p1" href="/phase1/new">+ Extract ideas</a></div>
+  </div>
 {% endif %}
 
-<a class="btn secondary" href="/phase1/new">+ Extract new ideas</a>
 {% endblock %}

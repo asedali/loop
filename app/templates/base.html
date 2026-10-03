@@ -3,24 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
   <title>{% block title %}LaunchLoop{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
+  <script>
+    /* Resolve the theme before first paint, or the page renders dark and then
+       flips to light — a visible flash on every load. Always writes a concrete
+     value: the stylesheet's light palette is keyed on [data-theme="light"], so
+     "no attribute" would mean "dark" regardless of what the OS asked for. */
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('loop-theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+          ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23a78bfa'/><text x='16' y='23' font-size='19' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='%230a0d13'>L</text></svg>">
+  <script src="/static/app.js" defer></script>
 </head>
 <body>
   <nav>
-    <a class="brand" href="/">LaunchLoop</a>
+    <a class="brand" href="/"><span class="mark">L</span><span class="brand-label">LaunchLoop</span></a>
     <div class="links">
+      <button type="button" class="theme-toggle" aria-label="Switch theme" title="Switch theme">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+        </svg>
+      </button>
       {% if user %}
-        <a href="/dashboard">Dashboard</a>
-        <a href="/phase1/new">New Idea</a>
-        <a href="/logout">Log out ({{ user.email }})</a>
+        {# A venture page has no nav link of its own; it belongs under Ventures.
+           Kept in step with the same mapping in app.js's swapIn(). #}
+        {% set path = request.url.path %}
+        {% set here = '/dashboard' if path.startswith('/venture/') else path %}
+        <a href="/dashboard" class="{% if here == '/dashboard' %}on{% endif %}">Ventures</a>
+        <a href="/phase1/ideas" class="{% if here.startswith('/phase1/ideas') %}on{% endif %}">Ideas</a>
+        <a href="/phase1/new" class="{% if here == '/phase1/new' %}on{% endif %}">New idea</a>
+        <form method="post" action="/logout" class="inline">
+          <button type="submit" class="linklike" title="{{ user.email }}">Log out</button>
+        </form>
       {% else %}
-        <a href="/login">Log in</a>
+        <a href="/login" class="{% if request.url.path == '/login' %}on{% endif %}">Log in</a>
         <a href="/signup">Sign up</a>
       {% endif %}
     </div>
   </nav>
-  <main>
+  <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
 </body>

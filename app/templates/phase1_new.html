@@ -1,13 +1,40 @@
 {% extends "base.html" %}
 {% block title %}Idea Discovery — LaunchLoop{% endblock %}
 {% block content %}
-<span class="badge phase1">Phase 1 — Idea Discovery</span>
+<div class="eyebrow">Phase 1 — Idea Discovery</div>
 <h1>Paste your research material</h1>
-<p class="subtitle">A CV excerpt, an abstract, a thesis chapter, or just a description of your work. The system will extract candidate technical claims and cluster them into commercial Idea Cards.</p>
+<p class="subtitle">A CV excerpt, an abstract, a thesis chapter, or a plain description of your
+work. The model extracts the technical claims, clusters them, and frames each cluster as a
+commercially-viable idea card.</p>
+
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
-<form method="post" action="/phase1/extract">
-  <label>Research material</label>
-  <textarea name="raw_text" placeholder="e.g. My PhD work developed a low-power SWIR imaging sensor for..." required></textarea>
-  <button type="submit">Extract idea cards</button>
-</form>
+
+<div class="grid-2" style="align-items:start;margin-top:1.75rem">
+  <div class="card">
+    <form method="post" action="/phase1/extract" data-thinking>
+      <div class="field">
+        <label>Research material</label>
+        <textarea name="raw_text" required
+          placeholder="e.g. My PhD work developed a low-power SWIR imaging sensor with 3&micro;m pixel pitch, running at 120fps on a 200mW budget. It outperforms existing InGaAs sensors on cost by ~4&times; because the readout circuitry is fabricated on the same wafer…">{{ raw_text or "" }}</textarea>
+        <div class="hint">Paste-text only in this MVP. At least a sentence or two — a few
+          characters gives the model nothing to cluster.</div>
+      </div>
+      <button type="submit" class="p1 lg block">Extract idea cards →</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>What happens next</h3>
+    <div class="pill-list" style="margin-top:.9rem">
+      <div class="pill"><span class="ic">1</span><span>Your material is analysed for distinct technical claims.</span></div>
+      <div class="pill"><span class="ic">2</span><span>Related claims are clustered into 3–6 idea cards.</span></div>
+      <div class="pill"><span class="ic">3</span><span>Each card gets a commercial framing and a strength signal.</span></div>
+      <div class="pill"><span class="ic">4</span><span>You pick one to take into the validation loop.</span></div>
+    </div>
+    <p class="disclaimer" style="margin-top:1.1rem">
+      The model is instructed to treat your material as data, never as instructions. It never
+      invents deadlines, funding amounts, or links.
+    </p>
+  </div>
+</div>
 {% endblock %}

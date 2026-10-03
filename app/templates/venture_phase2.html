@@ -1,90 +1,330 @@
 {% extends "base.html" %}
+{% from "macros.html" import business_model_canvas, cycle_rail, segment_board, venture_header %}
 {% block title %}{{ venture.idea_title }} — Validation Loop{% endblock %}
+{% block main_class %}wide{% endblock %}
 {% block content %}
-<span class="badge phase2">Phase 2 — Validation Loop</span>
-<span class="badge status-{{ venture.status }}">{{ venture.status }}</span>
-<h1>{{ venture.idea_title }}</h1>
+
+{# The run cap. Shown in two situations — a block with no run in progress, and
+   a block whose last verdict was "iterate" but which has no runs left. Both
+   need the same two exits, and a macro keeps them from drifting apart. #}
+{% macro cap_card(venture, focus, cap_extension) %}
+  <div class="card" style="margin-top:1.1rem">
+    <div class="row"><span class="badge o-parked"><span class="dot"></span>run cap reached</span></div>
+    <h3 style="margin-top:.6rem">You've used all {{ focus.max_cycles }} runs on this block</h3>
+    <p class="muted">The cap exists to force a decision rather than let the loop grind on.
+      Either give it more runs, or close it out and carry on.</p>
+
+    <form method="post" action="/venture/{{ venture.id }}/segment/{{ focus.element_name }}/extend"
+          style="margin-top:1.1rem">
+      <button type="submit" class="p2">+ {{ cap_extension }} more runs</button>
+      <span class="muted-sm">if this block still matters</span>
+    </form>
+
+    {# Parking counts as resolved, so this is a real exit rather than a dead
+       end — and the note becomes a documented gap in the launch plan. #}
+    <form method="post" action="/venture/{{ venture.id }}/segment/{{ focus.element_name }}/park"
+          style="margin-top:1.1rem">
+      <div class="field" style="margin-bottom:.7rem">
+        <label>Or park it — what did you learn?
+          <span class="opt">— becomes a known gap in the launch plan</span></label>
+        <textarea name="note" rows="2" required
+          placeholder="e.g. nobody will pay for standalone hardware, but the calibration service is a hit"></textarea>
+      </div>
+      <button type="submit" class="secondary">Park this block &amp; continue</button>
+    </form>
+  </div>
+{% endmacro %}
+
+{{ venture_header(venture, 2, "Phase 2 — Validation Loop") }}
 <p class="subtitle">{{ venture.commercial_framing }}</p>
-<p class="muted">Cycle {{ venture.cycle_count }} / {{ cycle_cap }}</p>
+{{ cycle_rail(venture.cycle_count, venture.max_cycles, 2) }}
 
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if quota_limit %}
+  <p class="muted-sm">{{ quota_used }} of {{ quota_limit }} AI calls used this month.</p>
+{% endif %}
 
-<h2>Business Model Canvas status</h2>
-<div class="bmc-grid">
-  {% for el in bmc_elements %}
-    <div class="bmc-cell">
-      <div class="name">{{ el.element_name.replace('_', ' ') }}</div>
-      <span class="badge status-{{ el.status }}">{{ el.status }}</span>
-      {% if el.notes %}<div class="notes">{{ el.notes }}</div>{% endif %}
-    </div>
-  {% endfor %}
-</div>
-
+{# ---------------- terminal states ---------------- #}
 {% if venture.status == "killed" %}
-  <div class="card">
-    <strong>This venture was killed.</strong>
-    <p class="muted">Evidence disconfirmed the idea with no viable pivot. The idea is back in your candidate list on the dashboard if you want to try a different direction.</p>
+  <div class="card" style="margin-top:1.75rem">
+    <div class="row"><span class="badge status-killed">killed</span></div>
+    <h3 style="margin-top:.6rem">This venture was killed</h3>
+    <p class="muted">You chose to end it after a critical block came back disconfirmed.
+      The idea is back in your candidate list on the dashboard if you want to try a
+      different angle.</p>
   </div>
-{% elif venture.status == "paused" %}
-  <div class="card">
-    <strong>Cycle cap reached ({{ cycle_cap }} cycles).</strong>
-    <p class="muted">The loop is designed to force an explicit decision at this point rather than run indefinitely. You can resume for more cycles if you believe the idea still has a viable path.</p>
-    <form method="post" action="/venture/{{ venture.id }}/resume">
-      <button type="submit" class="secondary">Resume anyway</button>
-    </form>
+{% elif venture.status == "pivoted" %}
+  <div class="card" style="margin-top:1.75rem">
+    <div class="row"><span class="badge status-pivoted">pivoted</span></div>
+    <h3 style="margin-top:.6rem">This venture was pivoted</h3>
+    {% if venture.pivot_note %}<p style="color:var(--text-2)">{{ venture.pivot_note }}</p>{% endif %}
+    {% if pivot_ventures %}
+      <p class="muted" style="margin-top:.8rem">The revised hypothesis is being tracked as a
+        separate venture. The blocks you had already validated carried across with their
+        evidence:</p>
+      <div class="row" style="margin-top:.6rem">
+        {% for v in pivot_ventures %}
+          <a class="btn p2" href="/venture/{{ v.id }}">Open "{{ v.idea_title }}" →</a>
+        {% endfor %}
+      </div>
+    {% endif %}
   </div>
 {% endif %}
 
-{% if current_cycle %}
-  <h2>Cycle {{ current_cycle.cycle_number }}</h2>
+{# ---------------- the block you are working on ---------------- #}
+{% if focus %}
+  {# the panel is first: a reader should never have to scroll to find what to do next #}
+  <h2><span class="h2-num">01</span> {{ focus.label }}
+    <span class="badge sev-{{ focus.severity }}">{{ focus.severity }}</span>
+    <span class="badge o-{{ focus.outcome }}"><span class="dot"></span>{{ focus.outcome }}</span>
+  </h2>
 
-  {% if awaiting_results %}
-    <form method="post" action="/venture/{{ venture.id }}/cycle/{{ current_cycle.id }}/log">
-      {% for todo in current_todos %}
-        <div class="todo-item">
-          <strong>{{ todo.task_type.replace('_',' ') | title }}</strong> — targets <em>{{ todo.target_element.replace('_',' ') }}</em>
-          <p>{{ todo.description }}</p>
-          <label>Outcome (what actually happened)</label>
-          <textarea name="outcome_{{ loop.index0 }}" required></textarea>
-          <label>Sample size (people talked to, sign-ups, etc.)</label>
-          <input type="text" name="sample_size_{{ loop.index0 }}" placeholder="e.g. 5 interviews">
-        </div>
-      {% endfor %}
-      <button type="submit">Log results &amp; analyze</button>
-    </form>
+  {% if focus.outcome == "passed" %}
+    <div class="card" style="margin-top:1.1rem">
+      <div class="row"><span class="badge o-passed"><span class="dot"></span>passed</span></div>
+      <h3 style="margin-top:.6rem">{{ focus.label }} is validated</h3>
+      {% if focus.hypothesis %}<p style="color:var(--text-2)">{{ focus.hypothesis }}</p>{% endif %}
+      {% if focus.notes %}<p class="muted" style="margin-top:.6rem">{{ focus.notes }}</p>{% endif %}
+      <p class="muted-sm" style="margin-top:.8rem">Used {{ focus.cycle_count }} run{{ '' if focus.cycle_count == 1 else 's' }}.</p>
+    </div>
 
-  {% elif awaiting_analysis %}
-    <div class="card">
-      <p>Results logged. Analysis didn't complete last time.</p>
-      <form method="post" action="/venture/{{ venture.id }}/cycle/{{ current_cycle.id }}/retry-analysis">
-        <button type="submit">Retry analysis</button>
+  {% elif focus.outcome == "parked" %}
+    <div class="card" style="margin-top:1.1rem">
+      <div class="row"><span class="badge o-parked"><span class="dot"></span>parked</span></div>
+      <h3 style="margin-top:.6rem">This block was parked</h3>
+      {% if focus.outcome_note %}<p style="color:var(--text-2)">{{ focus.outcome_note }}</p>{% endif %}
+      <p class="muted" style="margin-top:.6rem">The venture carries on without it — and this gap
+        is carried into the launch strategy rather than ignored.</p>
+      <form method="post" action="/venture/{{ venture.id }}/segment/{{ focus.element_name }}/unpark"
+            style="margin-top:1rem">
+        <button type="submit" class="secondary">Re-open this block</button>
       </form>
     </div>
 
-  {% elif current_analysis %}
-    <div class="card">
-      <p><strong>Recommendation: {{ current_analysis.recommendation | upper }}</strong></p>
-      <p>{{ current_analysis.recommendation_reasoning }}</p>
-      {% if current_analysis.pivot_suggestion %}
-        <p class="muted">Suggested pivot: {{ current_analysis.pivot_suggestion }}</p>
+  {% elif focus.outcome == "failed" %}
+    {# A critical block failed. The model flagged it; it does not get to close the
+       venture. Two explicit exits, no default, and the reasoning is shown either
+       way so the choice is informed. #}
+    <div class="decision-card" style="margin-top:1.1rem">
+      <div class="row"><span class="badge o-failed"><span class="dot"></span>failed</span>
+        <span class="badge sev-critical">critical block</span></div>
+      <h3 style="margin-top:.6rem">{{ focus.label }} came back disconfirmed</h3>
+      {% if focus.outcome_note %}
+        <p style="color:var(--text-2);margin-top:.6rem">{{ focus.outcome_note }}</p>
       {% endif %}
+      <p class="muted" style="margin-top:.7rem">This is a critical block, so the venture can't
+        reach launch until you decide what to do. The model recommends killing it, but that's
+        your call — not its.</p>
+
+      <form method="post" action="/venture/{{ venture.id }}/kill" style="margin-top:1.1rem">
+        <button type="submit" class="danger">Kill this venture</button>
+        <span class="muted-sm">returns the idea to your candidates</span>
+      </form>
+
+      <form method="post" action="/venture/{{ venture.id }}/pivot" style="margin-top:.9rem">
+        <div class="field" style="margin-bottom:.7rem">
+          <label>Or pivot — what changes? <span class="opt">— becomes the new hypothesis</span></label>
+          <textarea name="note" rows="2"
+            placeholder="e.g. the integrated module is a services problem, not a hardware one — sell the calibration service first"></textarea>
+        </div>
+        <button type="submit" class="secondary">Pivot instead</button>
+        <span class="muted-sm" style="display:block;margin-top:.5rem">
+          {{ resolved }} of {{ total_segments }} blocks are validated and carry over to the new venture.
+        </span>
+      </form>
+    </div>
+
+  {% else %}
+    {# open or active: show the hypothesis, then either the run form or a
+       start button #}
+    {% if focus.hypothesis %}
+      <div class="hypothesis">
+        <span class="hyp-label">Hypothesis under test</span>
+        <p>{{ focus.hypothesis }}</p>
+      </div>
+    {% endif %}
+
+    {% set is_active = active_segment and active_segment.element_name == focus.element_name %}
+
+    {% if is_active and current_cycle and awaiting_results %}
+      <p class="muted" style="margin-top:-.2rem">Do these in the real world, then log what actually
+        happened. One run costs one AI call from your monthly cap.</p>
+      <form method="post" action="/venture/{{ venture.id }}/run/{{ current_cycle.id }}/log"
+            data-thinking style="margin-top:1.1rem">
+        {% for todo in current_todos %}
+          <div class="todo">
+            <div class="todo-head">
+              <span class="badge phase2">{{ todo.method | replace('_', ' ') }}</span>
+              {% if todo.effort %}<span class="chip">{{ todo.effort }}</span>{% endif %}
+              {% if todo.target_sample %}<span class="chip">target {{ todo.target_sample }}</span>{% endif %}
+            </div>
+            <p class="todo-title">{{ todo.title }}</p>
+            {% if todo.why_this %}<p class="todo-why">Tests: {{ todo.why_this }}</p>{% endif %}
+            {% if todo.steps %}
+              <ol class="todo-steps">
+                {% for step in todo.steps %}<li>{{ step }}</li>{% endfor %}
+              </ol>
+            {% endif %}
+            {% if todo.success_criteria %}
+              <p class="todo-pass">Pass when — {{ todo.success_criteria }}</p>
+            {% endif %}
+            <div class="field">
+              <label>What actually happened</label>
+              <textarea name="outcome_{{ loop.index0 }}" required
+                placeholder="e.g. 6 of 8 interviewees named downtime as a top-3 cost, unprompted…"></textarea>
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label>Sample size <span class="opt">— how many people, sign-ups, or data points</span></label>
+              <input type="text" name="sample_size_{{ loop.index0 }}" placeholder="e.g. 8 interviews">
+            </div>
+          </div>
+        {% endfor %}
+        <div class="row" style="margin-top:1.25rem">
+          <button type="submit" class="p2 lg">Log results &amp; get a verdict →</button>
+        </div>
+      </form>
+
+    {% elif is_active and current_cycle and awaiting_analysis %}
+      <div class="card" style="margin-top:1.1rem">
+        <div class="row"><span class="badge o-active"><span class="dot"></span>results saved</span></div>
+        <h3 style="margin-top:.6rem">Verdict didn't complete</h3>
+        <p class="muted">Your results are saved. Retry rather than re-entering them.</p>
+        <form method="post" action="/venture/{{ venture.id }}/run/{{ current_cycle.id }}/retry-analysis"
+              data-thinking style="margin-top:1rem">
+          <button type="submit" class="p2">Retry verdict</button>
+        </form>
+      </div>
+
+    {% elif is_active and current_cycle and current_analysis %}
+      {# the verdict for the run just completed #}
+      <div class="verdict v-{{ current_analysis.verdict }}">
+        <div class="row between">
+          <span class="verdict-label">Verdict — {{ current_analysis.verdict }}</span>
+          <span class="badge o-{{ focus.outcome }}"><span class="dot"></span>{{ focus.outcome }}</span>
+        </div>
+        <p style="margin-top:.7rem;color:var(--text-2)">{{ current_analysis.verdict_reasoning }}</p>
+        {% if current_analysis.evidence_note %}
+          <p class="muted" style="margin-top:.7rem"><strong style="color:var(--text)">Evidence:</strong>
+            {{ current_analysis.evidence_note }}</p>
+        {% endif %}
+        {% if current_analysis.pivot_suggestion %}
+          <p class="muted" style="margin-top:.7rem"><strong style="color:var(--text)">Suggested pivot:</strong>
+            {{ current_analysis.pivot_suggestion }}</p>
+        {% endif %}
+        {% if current_analysis.workaround %}
+          <p class="muted" style="margin-top:.7rem"><strong style="color:var(--text)">Workaround:</strong>
+            {{ current_analysis.workaround }}</p>
+        {% endif %}
+      </div>
+
+      {% if current_analysis.verdict == 'iterate' and focus.cycle_count < focus.max_cycles %}
+        <form method="post" action="/venture/{{ venture.id }}/segment/{{ focus.element_name }}/run"
+              data-thinking style="margin-top:1.1rem">
+          <button type="submit" class="p2">Start run {{ focus.cycle_count + 1 }} →</button>
+          <span class="muted-sm">evidence was thin — one more pass should settle it.</span>
+        </form>
+      {% elif focus.cycle_count >= focus.max_cycles %}
+        {# The verdict said iterate, but there are no runs left. Showing only the
+           verdict here would hide the fact that the user is now out of budget on
+           this block, and with it the only two ways forward. #}
+        {{ cap_card(venture, focus, cap_extension) }}
+      {% endif %}
+
+    {% elif current_cycle and start_blocked_reason %}
+      {# another block has the in-flight run #}
+      <div class="card" style="margin-top:1.1rem">
+        <div class="row"><span class="badge o-active"><span class="dot"></span>run in progress</span></div>
+        <p class="muted" style="margin-top:.6rem">{{ start_blocked_reason }}</p>
+        <a class="btn secondary" href="/venture/{{ venture.id }}/segment/{{ current_cycle.segment }}"
+           style="margin-top:.9rem">Go to that block →</a>
+      </div>
+
+    {% elif focus.cycle_count >= focus.max_cycles %}
+      {{ cap_card(venture, focus, cap_extension) }}
+
+    {% else %}
+      <form method="post" action="/venture/{{ venture.id }}/segment/{{ focus.element_name }}/run"
+            data-thinking style="margin-top:1.1rem">
+        <button type="submit" class="p2 lg">
+          {% if focus.cycle_count %}Start run {{ focus.cycle_count + 1 }}{% else %}Design the first run{% endif %} →
+        </button>
+        <span class="muted-sm" style="display:block;margin-top:.5rem">
+          The model writes the hypothesis and 2–4 concrete methods for this block.
+        </span>
+      </form>
+    {% endif %}
+  {% endif %}
+
+  {# per-block run history #}
+  {% if runs %}
+    <h3 style="margin-top:1.75rem" class="muted-sm">Runs on this block</h3>
+    <div class="history">
+      {% for r in runs %}
+        <div class="history-row">
+          <span class="cyc">Run {{ r.cycle_number }}</span>
+          {% if r.decision %}
+            <span class="dec dec-{{ r.decision }}">{{ r.decision }}</span>
+          {% else %}
+            <span class="dec" style="color:var(--text-muted)">in progress</span>
+          {% endif %}
+          <span class="spacer"></span>
+          {% if r.analysis_json %}
+            <span class="muted-sm">scored</span>
+          {% elif r.results_json %}
+            <span class="muted-sm">logged, not scored</span>
+          {% else %}
+            <span class="muted-sm">awaiting results</span>
+          {% endif %}
+        </div>
+      {% endfor %}
     </div>
   {% endif %}
 {% endif %}
 
-{% if can_start_new_cycle %}
-  <form method="post" action="/venture/{{ venture.id }}/cycle/new">
-    <button type="submit">Generate cycle {{ venture.cycle_count + 1 }} TODOs</button>
-  </form>
+{# ---------------- all nine blocks ---------------- #}
+<h2 style="margin-top:2.25rem"><span class="h2-num">02</span> Blocks
+  <span class="muted-sm" style="font-weight:400">— {{ resolved }} of {{ total_segments }} resolved</span>
+</h2>
+{% if not venture.status in ("killed", "pivoted") %}
+  <p class="muted" style="margin-top:-.4rem">Work one block at a time. Each run tests a single
+    hypothesis until it passes, iterates, or is parked. The order below is a recommendation —
+    open whichever one you want.</p>
+  {{ segment_board(segments, venture, recommended_segment) }}
+{% else %}
+  {{ segment_board(segments, venture) }}
 {% endif %}
 
-{% if cycles|length > 0 %}
-  <h2>Cycle history</h2>
-  {% for c in cycles %}
-    <div class="card">
-      <strong>Cycle {{ c.cycle_number }}</strong>
-      {% if c.decision %}<span class="muted"> — decision: {{ c.decision }}</span>{% endif %}
-    </div>
-  {% endfor %}
+{# ---------------- canvas ---------------- #}
+<h2 style="margin-top:2.25rem"><span class="h2-num">03</span> Business Model Canvas</h2>
+{{ business_model_canvas(segments, venture.id) }}
+
+{# ---------------- whole-venture history ---------------- #}
+{% if venture.status not in ("killed", "pivoted") and cycles | length > 1 %}
+  <h2 style="margin-top:2.25rem"><span class="h2-num">04</span> All runs</h2>
+  <div class="history">
+    {% for c in cycles %}
+      <div class="history-row">
+        <span class="cyc">Run {{ c.cycle_number }}</span>
+        {% if c.segment %}
+          <a class="chip" href="/venture/{{ venture.id }}/segment/{{ c.segment }}">
+            {{ segment_by_key[c.segment].label if c.segment in segment_by_key else c.segment }}
+          </a>
+        {% endif %}
+        {% if c.decision %}
+          <span class="dec dec-{{ c.decision }}">{{ c.decision }}</span>
+        {% else %}
+          <span class="dec" style="color:var(--text-muted)">in progress</span>
+        {% endif %}
+        <span class="spacer"></span>
+        {% if c.analysis_json %}
+          <span class="muted-sm">scored</span>
+        {% elif c.results_json %}
+          <span class="muted-sm">results logged, not scored</span>
+        {% else %}
+          <span class="muted-sm">awaiting results</span>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
 {% endif %}
 {% endblock %}
