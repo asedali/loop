@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import business_model_canvas %}
+{% from "macros.html" import business_model_canvas, challenge_panel %}
 {% block title %}{{ venture.idea_title }} — Launch Strategy{% endblock %}
 {% block main_class %}wide{% endblock %}
 {% block content %}
@@ -10,7 +10,10 @@
 </div>
 <h1>{{ venture.idea_title }}</h1>
 <p class="subtitle">{{ resolved }} of {{ total_segments }} blocks resolved by real-world evidence
-rather than assumption — here's what that evidence supports commercially.</p>
+    rather than assumption — here's what that evidence supports commercially.</p>
+
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if note %}<div class="callout ok">{{ note }}</div>{% endif %}
 
 <h2><span class="h2-num">01</span> Canvas</h2>
 {{ business_model_canvas(segments, venture.id) }}
@@ -79,23 +82,90 @@ rather than assumption — here's what that evidence supports commercially.</p>
 
   <h2><span class="h2-num">04</span> Action plan</h2>
   <p class="muted" style="margin-top:-.5rem">Sequenced to your first real milestone — a grant
-    submitted, a pilot signed, or a paying customer.</p>
+    submitted, a pilot signed, or a paying customer. Tick steps off as you do them and say what
+    happened: the record is the point, and a completed step with no outcome is just a claim.</p>
+
+  {% if progress and progress.total %}
+    <div class="plan-progress">
+      <div class="plan-progress-bar"
+           role="progressbar" aria-valuemin="0" aria-valuemax="{{ progress.total }}"
+           aria-valuenow="{{ progress.done }}"
+           aria-label="Action plan progress">
+        <span style="width: {{ (progress.done / progress.total * 100) | round(1) }}%"></span>
+      </div>
+      <span class="plan-progress-count">
+        {{ progress.done }} of {{ progress.total }} done{% if progress.blocked %} · {{ progress.blocked }} blocked{% endif %}
+      </span>
+    </div>
+    {% if progress.done == progress.total %}
+      <div class="callout ok" style="margin-top:.9rem">
+        <strong>Every step in this plan is done.</strong>
+        <p>That is the end of what this app planned for you. It does not track revenue, contacts or
+          anything after launch.</p>
+      </div>
+    {% endif %}
+  {% endif %}
+
   <div class="stack">
-    {% for a in strategy.action_plan %}
-      <div class="strat-item">
+    {% for a in plan_items %}
+      <div class="strat-item strat-step is-{{ a.status }}">
         <span class="strat-num">{{ loop.index }}</span>
         <div class="strat-body">
           <div class="row">
             <span class="badge phase3">{{ a.milestone_type }}</span>
             <span class="item-title" style="margin:0">{{ a.step }}</span>
           </div>
+          {% if a.status != 'pending' %}
+            <p class="strat-note">
+              <span class="badge o-{{ a.status }}"><span class="dot"></span>{{ a.status }}</span>
+              {{ a.note }}
+            </p>
+          {% endif %}
+          <form method="post" action="/venture/{{ venture.id }}/phase3/step" class="step-form">
+            {# The key is what this form was RENDERED for. The route re-derives
+               the key from the stored plan and requires the two to agree, so a
+               form submitted against a since-regenerated plan is refused rather
+               than silently re-pointed at whatever now sits at this index. It is
+               a consistency assertion, never an address the server trusts. #}
+            <input type="hidden" name="step_key" value="{{ a.key }}">
+            <input type="hidden" name="index" value="{{ a.index }}">
+            {% if a.status in ('done', 'blocked') %}
+              {# The outcome is already recorded, so there is nothing to type — only a way back. #}
+              <div class="step-actions">
+                <button type="submit" class="ghost sm" name="status" value="pending">Reopen this step</button>
+              </div>
+            {% else %}
+              {# No hidden `status` field. A hidden input plus a button of the
+                 same name would submit BOTH, and Starlette's form.get() takes the
+                 first — so the hidden `done` would silently beat "Mark blocked"
+                 every time. Both buttons carry the name instead; only the one
+                 clicked is submitted. Implicit submission (pressing Enter in the
+                 text field) activates the first button, which is "Mark done". #}
+              <label class="step-note-label" for="note-{{ a.index }}">
+                What happened <span class="muted-sm">— required to mark it done or blocked</span>
+              </label>
+              <input class="step-note" id="note-{{ a.index }}" type="text" name="note"
+                     maxlength="2000" required value="{{ a.note }}"
+                     placeholder="Sent 40 emails, 6 replies, 2 calls booked">
+              <div class="step-actions">
+                <button type="submit" class="secondary sm" name="status" value="done">Mark done</button>
+                <button type="submit" class="ghost sm" name="status" value="blocked">Mark blocked</button>
+              </div>
+            {% endif %}
+          </form>
         </div>
       </div>
+    {% else %}
+      <p class="muted">The model returned no action-plan steps for this venture.</p>
     {% endfor %}
   </div>
 
   <form method="post" action="/venture/{{ venture.id }}/phase3/generate" data-thinking style="margin-top:1.75rem">
     <button type="submit" class="secondary">↻ Regenerate strategy</button>
   </form>
+
+  {{ challenge_panel('/venture/' ~ venture.id ~ '/mentor/plan', plan_challenges,
+                     heading='Have the plan challenged',
+                     subject='launch plan + resolved canvas') }}
 {% endif %}
 {% endblock %}

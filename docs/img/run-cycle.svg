@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 500" width="1060" height="500" role="img" aria-labelledby="t d" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif">
+  <title id="t">Anatomy of one validation run</title>
+  <desc id="d">Four beats in sequence. Beat one: the model states a single falsifiable hypothesis for the block it is about to test. Beat two, one AI call: it writes two to four tasks, each with a method drawn from a per-block list, ordered steps, a target sample size, an effort estimate, and a success criterion the user can later judge true or false. Beat three, the only beat the app cannot do: the user leaves and does the work in the real world. Beat four: the user logs what happened per task, which is saved before the model is asked, and a second AI call returns a verdict for that block alone.</desc>
+  <style>
+    .bg{fill:#ffffff}
+    .pnl{fill:#f5f8fc;stroke:#dde3ee;stroke-width:1}
+    .pnl2{fill:#ffffff;stroke:#dde3ee;stroke-width:1}
+    .ink{fill:#101827}.ink2{fill:#3b475a}.ink3{fill:#67748a}
+    .t1{fill:#0284c7}.t2{fill:#7c3aed}.dk{fill:#e11d48}.wt{fill:#a16207}
+    .sk{fill:#e2e8f0}
+    .f2{fill:#7c3aed;fill-opacity:.09}
+    .fw{fill:#a16207;fill-opacity:.10}
+    .a2{stroke:#7c3aed}.am{stroke:#94a3b8}.aw{stroke:#c08a2a}
+    .mk2{fill:#7c3aed}.mkm{fill:#94a3b8}.mkw{fill:#c08a2a}
+    .caps{letter-spacing:.09em;font-size:10.5px;font-weight:700}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#080a0f}
+      .pnl{fill:#10141c;stroke:#232b3a}
+      .pnl2{fill:#161b25;stroke:#232b3a}
+      .ink{fill:#eef2f9}.ink2{fill:#c2cbd9}.ink3{fill:#8593a8}
+      .t1{fill:#38bdf8}.t2{fill:#a78bfa}.dk{fill:#fb7185}.wt{fill:#fbbf24}
+      .sk{fill:#1c2230}
+      .f2{fill:#a78bfa;fill-opacity:.13}
+      .fw{fill:#fbbf24;fill-opacity:.12}
+      .a2{stroke:#a78bfa}.am{stroke:#64748b}.aw{stroke:#fbbf24}
+      .mk2{fill:#a78bfa}.mkm{fill:#64748b}.mkw{fill:#fbbf24}
+    }
+  </style>
+  <defs>
+    <marker id="m2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk2" d="M0 .6 L7.4 4 L0 7.4 z"/></marker>
+    <marker id="mm" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkm" d="M0 .6 L7.4 4 L0 7.4 z"/></marker>
+    <marker id="mw" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkw" d="M0 .6 L7.4 4 L0 7.4 z"/></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1060" height="500"/>
+  <text class="ink" x="32" y="40" font-size="21" font-weight="700">Anatomy of one validation run</text>
+  <text class="ink3" x="32" y="62" font-size="13">The same four beats every time, for whichever block you are working on. Two AI calls, and one stretch the app cannot help with.</text>
+
+  <!-- ============ beat 1 ============ -->
+  <rect class="pnl" x="32" y="96" width="230" height="252" rx="14"/>
+  <text class="lb" x="0" y="0"/>
+  <circle cx="52" cy="120" r="11" fill="#94a3b8"/>
+  <text x="52" y="124" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">1</text>
+  <text class="ink" x="72" y="125" font-size="14" font-weight="700">A hypothesis</text>
+  <text class="ink3" x="52" y="150" font-size="12">One falsifiable claim about</text>
+  <text class="ink3" x="52" y="167" font-size="12">the real world, not “we need</text>
+  <text class="ink3" x="52" y="184" font-size="12">to validate X”.</text>
+  <rect class="pnl2" x="52" y="200" width="190" height="66" rx="9"/>
+  <text class="ink2" x="64" y="220" font-size="11.5" font-style="italic">“Site managers rank field</text>
+  <text class="ink2" x="64" y="237" font-size="11.5" font-style="italic">downtime as a top-3 cost.”</text>
+  <text class="ink3" x="64" y="257" font-size="10.5">either true, or false — later</text>
+  <text class="ink3" x="52" y="290" font-size="11.5">Revised on every “iterate”,</text>
+  <text class="ink3" x="52" y="307" font-size="11.5">so it gets sharper, not vaguer.</text>
+  <text class="ink3" x="52" y="332" font-size="11.5">Stored before the run, so the</text>
+  <text class="ink3" x="52" y="349" font-size="11.5">panel leads with something.</text>
+
+  <!-- arrow -->
+  <path class="a2" d="M266 222 H296" fill="none" stroke-width="1.8" marker-end="url(#m2)"/>
+
+  <!-- ============ beat 2 ============ -->
+  <rect class="pnl" x="300" y="96" width="230" height="252" rx="14"/>
+  <rect class="f2" x="300" y="96" width="230" height="252" rx="14"/>
+  <circle cx="320" cy="120" r="11" fill="#7c3aed"/>
+  <text x="320" y="124" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">2</text>
+  <text class="ink" x="340" y="125" font-size="14" font-weight="700">2–4 tasks</text>
+  <rect class="pnl2" x="466" y="108" width="56" height="18" rx="9"/>
+  <text class="t2" x="494" y="121" text-anchor="middle" font-size="9.5" font-weight="700">AI CALL</text>
+  <text class="ink3" x="320" y="152" font-size="12">Each task carries:</text>
+  <text class="ink2" x="320" y="176" font-size="12">• a method from a per-block list</text>
+  <text class="ink3" x="336" y="194" font-size="11">customer → problem_interview,</text>
+  <text class="ink3" x="336" y="209" font-size="11">segment_survey, lead_interview</text>
+  <text class="ink3" x="336" y="224" font-size="11">revenue → preorder_test,</text>
+  <text class="ink3" x="336" y="239" font-size="11">pricing_page_test, …</text>
+  <text class="ink2" x="320" y="262" font-size="12">• ordered steps</text>
+  <text class="ink2" x="320" y="282" font-size="12">• a target sample size</text>
+  <text class="ink2" x="320" y="302" font-size="12">• an effort estimate</text>
+  <text class="ink2" x="320" y="322" font-size="12" font-weight="600">• a success criterion</text>
+  <text class="ink3" x="320" y="343" font-size="11">judgeable true or false after</text>
+
+  <!-- arrow -->
+  <path class="aw" d="M534 222 H564" fill="none" stroke-width="1.8" marker-end="url(#mw)"/>
+
+  <!-- ============ beat 3 ============ -->
+  <rect class="fw" x="568" y="96" width="230" height="252" rx="14"/>
+  <circle cx="588" cy="120" r="11" fill="#a16207"/>
+  <text x="588" y="124" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">3</text>
+  <text class="ink" x="608" y="125" font-size="14" font-weight="700">Do the work</text>
+  <text class="wt" x="786" y="121" text-anchor="end" font-size="10" font-weight="700" letter-spacing=".06em">OFFLINE</text>
+  <text class="ink3" x="588" y="156" font-size="12.5">This is the whole point of</text>
+  <text class="ink3" x="588" y="173" font-size="12.5">the app, and the one beat no</text>
+  <text class="ink3" x="588" y="190" font-size="12.5">model can do for you.</text>
+  <rect class="pnl2" x="588" y="206" width="190" height="76" rx="9"/>
+  <text class="ink2" x="600" y="226" font-size="11.5">interviews · a landing page</text>
+  <text class="ink2" x="600" y="243" font-size="11.5">a vendor quote · a waitlist</text>
+  <text class="ink2" x="600" y="260" font-size="11.5">a preorder · a keyword test</text>
+  <text class="ink3" x="600" y="277" font-size="10.5">whatever the method demands</text>
+  <text class="ink3" x="588" y="304" font-size="11.5">Days or weeks, usually.</text>
+  <text class="ink3" x="588" y="321" font-size="11.5">The app is not involved and</text>
+  <text class="ink3" x="588" y="338" font-size="11.5">does not pretend otherwise.</text>
+
+  <!-- arrow -->
+  <path class="a2" d="M802 222 H832" fill="none" stroke-width="1.8" marker-end="url(#m2)"/>
+
+  <!-- ============ beat 4 ============ -->
+  <rect class="pnl" x="836" y="96" width="192" height="252" rx="14"/>
+  <rect class="f2" x="836" y="96" width="192" height="252" rx="14"/>
+  <circle cx="856" cy="120" r="11" fill="#7c3aed"/>
+  <text x="856" y="124" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">4</text>
+  <text class="ink" x="876" y="125" font-size="14" font-weight="700">Log it</text>
+  <rect class="pnl2" x="934" y="108" width="86" height="18" rx="9"/>
+  <text class="t2" x="977" y="121" text-anchor="middle" font-size="9.5" font-weight="700">AI CALL</text>
+  <text class="ink3" x="856" y="152" font-size="12">Per task: what actually</text>
+  <text class="ink3" x="856" y="167" font-size="12">happened, and the sample</text>
+  <text class="ink3" x="856" y="182" font-size="12">size.</text>
+  <text class="ink2" x="856" y="210" font-size="12" font-weight="600">Saved first.</text>
+  <text class="ink3" x="856" y="228" font-size="11.5">Then the model is asked to</text>
+  <text class="ink3" x="856" y="243" font-size="11.5">judge, against the criteria</text>
+  <text class="ink3" x="856" y="258" font-size="11.5">it set in beat 2.</text>
+  <rect class="pnl2" x="856" y="274" width="152" height="30" rx="8"/>
+  <text class="t2" x="932" y="293" text-anchor="middle" font-size="11.5" font-weight="700">verdict for this block</text>
+  <text class="ink3" x="856" y="324" font-size="11.5">If that call fails, the log</text>
+  <text class="ink3" x="856" y="339" font-size="11.5">survives — you retry the</text>
+  <text class="ink3" x="856" y="354" font-size="11.5">verdict, not the typing.</text>
+
+  <!-- ============ the reason it holds together ============ -->
+  <rect class="pnl2" x="32" y="376" width="996" height="94" rx="14"/>
+  <rect class="t2" x="32" y="376" width="5" height="94" rx="2.5"/>
+  <text class="ink" x="56" y="402" font-size="15" font-weight="700">Why this resists turning into reassurance</text>
+  <text class="ink3" x="56" y="426" font-size="12.5">The model commits to a falsifiable criterion in beat 2 — <tspan class="ink2">before</tspan> you spend a day doing the work. In beat 4 it can only</text>
+  <text class="ink3" x="56" y="444" font-size="12.5">answer “did the evidence meet the bar I wrote down?”, so it cannot quietly redefine success after the fact. A single</text>
+  <text class="ink3" x="56" y="462" font-size="12.5">data point is <tspan class="ink2">not</tspan> a pass, and thin evidence comes back as <tspan class="ink2">iterate</tspan> — which is why each block is allowed three runs.</text>
+</svg>

@@ -2,12 +2,28 @@
 {% block title %}Idea Discovery — LaunchLoop{% endblock %}
 {% block content %}
 <div class="eyebrow">Phase 1 — Idea Discovery</div>
-<h1>Paste your research material</h1>
+<h1>Bring your research material</h1>
 <p class="subtitle">A CV excerpt, an abstract, a thesis chapter, or a plain description of your
-work. The model extracts the technical claims, clusters them, and frames each cluster as a
-commercially-viable idea card.</p>
+work — paste it, upload a PDF or Word document, or import a record by its ORCID, DOI
+or arXiv ID. The model extracts the technical claims, clusters them, and frames each
+cluster as a commercially-viable idea card.</p>
 
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if from_upload %}
+  <div class="callout ok" style="margin-top:1rem">
+    Read <strong>{{ from_upload }}</strong>. Trim anything you don't want analysed —
+    a reference list, an acknowledgements page, someone else's section — before
+    you extract. The file itself was discarded; only the text below is sent.
+  </div>
+{% endif %}
+{% if from_import %}
+  <div class="callout ok" style="margin-top:1rem">
+    Imported {{ from_import.source }} record — <strong>{{ from_import.label }}</strong>.
+    This is someone else's text, so read it before you extract and delete any line
+    you don't want analysed. Add your own context at the top if you have some; a
+    bare title list gives the model much less to work with than a paragraph.
+  </div>
+{% endif %}
 
 <div class="grid-2" style="align-items:start;margin-top:1.75rem">
   <div class="card">
@@ -16,15 +32,55 @@ commercially-viable idea card.</p>
         <label>Research material</label>
         <textarea name="raw_text" required
           placeholder="e.g. My PhD work developed a low-power SWIR imaging sensor with 3&micro;m pixel pitch, running at 120fps on a 200mW budget. It outperforms existing InGaAs sensors on cost by ~4&times; because the readout circuitry is fabricated on the same wafer…">{{ raw_text or "" }}</textarea>
-        <div class="hint">Paste-text only in this MVP. At least a sentence or two — a few
-          characters gives the model nothing to cluster.</div>
+        <div class="hint">At least a sentence or two — a few characters gives the model
+          nothing to cluster.</div>
       </div>
       <button type="submit" class="p1 lg block">Extract idea cards →</button>
     </form>
   </div>
 
   <div class="card">
-    <h3>What happens next</h3>
+    <h3>Or upload a file</h3>
+    <p class="muted" style="margin-top:.6rem">
+      PDF, Word, or plain text. The file is read in memory and
+      <strong>discarded</strong> — nothing is stored, so the text below is the only
+      thing that exists and the only thing that gets sent.
+    </p>
+    <form method="post" action="/phase1/upload" enctype="multipart/form-data"
+          style="margin-top:1rem">
+      <div class="field">
+        <input type="file" name="file" accept=".pdf,.docx,.txt,.md,application/pdf" required>
+      </div>
+      <button type="submit" class="secondary block">Read the file →</button>
+    </form>
+    <p class="muted-sm" style="margin-top:.9rem">
+      Up to {{ max_upload_bytes }} and {{ max_pdf_pages }} pages. Scanned documents
+      have no text to read — open those and paste the text instead.
+    </p>
+
+    {% if import_enabled %}
+    <h3 style="margin-top:1.75rem">Or import by identifier</h3>
+    <p class="muted" style="margin-top:.6rem">
+      {% for name in import_sources %}{{ name }}{% if not loop.last %}, {% endif %}{% endfor %}.
+      Paste one and the title, authors and abstract come back into the box for you to edit.
+    </p>
+    <form method="post" action="/phase1/import" style="margin-top:1rem">
+      <div class="field">
+        <input type="text" name="identifier" required
+          placeholder="0000-0002-1825-0097 · 10.1000/xyz123 · 2301.01234"
+          autocomplete="off" spellcheck="false">
+        <div class="hint">A full ORCID profile URL or an arXiv.org link works too.
+          Only the record is fetched, and nothing about you is sent to the source.</div>
+      </div>
+      <button type="submit" class="secondary block">Fetch the record →</button>
+    </form>
+    <p class="muted-sm" style="margin-top:.9rem">
+      Public metadata only — these services read a record that is already public. A DOI with
+      no abstract registered gives you just the title and authors.
+    </p>
+    {% endif %}
+
+    <h3 style="margin-top:1.75rem">What happens next</h3>
     <div class="pill-list" style="margin-top:.9rem">
       <div class="pill"><span class="ic">1</span><span>Your material is analysed for distinct technical claims.</span></div>
       <div class="pill"><span class="ic">2</span><span>Related claims are clustered into 3–6 idea cards.</span></div>
@@ -32,8 +88,9 @@ commercially-viable idea card.</p>
       <div class="pill"><span class="ic">4</span><span>You pick one to take into the validation loop.</span></div>
     </div>
     <p class="disclaimer" style="margin-top:1.1rem">
-      The model is instructed to treat your material as data, never as instructions. It never
-      invents deadlines, funding amounts, or links.
+      The model is instructed to treat your material as data, never as instructions — pasted,
+      uploaded or imported, it is wrapped the same way, and imported records are flagged to
+      the model as text someone else wrote. It never invents deadlines, funding amounts, or links.
     </p>
   </div>
 </div>

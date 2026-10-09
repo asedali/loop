@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import business_model_canvas, cycle_rail, segment_board, venture_header %}
+{% from "macros.html" import business_model_canvas, challenge_panel, cycle_rail, segment_board, venture_header %}
 {% block title %}{{ venture.idea_title }} — Validation Loop{% endblock %}
 {% block main_class %}wide{% endblock %}
 {% block content %}
@@ -40,6 +40,7 @@
 {{ cycle_rail(venture.cycle_count, venture.max_cycles, 2) }}
 
 {% if error %}<div class="error">{{ error }}</div>{% endif %}
+{% if note %}<div class="callout ok">{{ note }}</div>{% endif %}
 {% if quota_limit %}
   <p class="muted-sm">{{ quota_used }} of {{ quota_limit }} AI calls used this month.</p>
 {% endif %}
@@ -255,11 +256,29 @@
     {% endif %}
   {% endif %}
 
-  {# per-block run history #}
-  {% if runs %}
-    <h3 style="margin-top:1.75rem" class="muted-sm">Runs on this block</h3>
+  {# per-block run history
+     The context key is `focus_runs`, and this panel used to test a `runs`
+     variable that _venture_context() never provided — Jinja's undefined is
+     falsy, so the whole panel silently never rendered. `focus_state` is the
+     same story: computed for this panel, read by nobody. Both are used here
+     now. #}
+  {% if focus_runs %}
+    <h3 style="margin-top:1.75rem" class="muted-sm">
+      Runs on this block
+      {% if focus_state %}
+        <span class="badge o-{{ focus.outcome }}"><span class="dot"></span>
+          {{ 'resolved' if focus_state.resolved else ('cap reached' if focus_state.at_cap else 'open') }}
+        </span>
+      {% endif %}
+      <span style="font-weight:400">{{ focus_runs | length }} of {{ focus.max_cycles }} used</span>
+    </h3>
+    {% if focus.hypothesis %}
+      <p class="muted-sm" style="margin-top:.35rem">
+        Each of these tested: {{ focus.hypothesis }}
+      </p>
+    {% endif %}
     <div class="history">
-      {% for r in runs %}
+      {% for r in focus_runs %}
         <div class="history-row">
           <span class="cyc">Run {{ r.cycle_number }}</span>
           {% if r.decision %}
@@ -267,7 +286,14 @@
           {% else %}
             <span class="dec" style="color:var(--text-muted)">in progress</span>
           {% endif %}
+          {% if r.todos_json and r.todos_json[0] %}
+            {# todos_json[0].title is the run's own first task — the only
+               per-run "what was tested" that is stored today. Per-run hypothesis
+               text arrives with M2.3's locked, hashed criteria. #}
+            <span class="muted-sm">{{ r.todos_json[0].title }}</span>
+          {% endif %}
           <span class="spacer"></span>
+          <span class="muted-sm">{{ r.created_at.strftime('%d %b %Y') if r.created_at else '' }}</span>
           {% if r.analysis_json %}
             <span class="muted-sm">scored</span>
           {% elif r.results_json %}
@@ -326,5 +352,15 @@
       </div>
     {% endfor %}
   </div>
+{% endif %}
+
+{# At the end of the content block, after the run history: this asks a question
+   about the block in front of them, so it belongs with that block's panel rather
+   than interrupting it. #}
+{% if focus %}
+  {{ challenge_panel('/venture/' ~ venture.id ~ '/mentor/segment/' ~ focus.element_name,
+                     segment_challenges,
+                     heading='Have this block challenged',
+                     subject=focus.label) }}
 {% endif %}
 {% endblock %}

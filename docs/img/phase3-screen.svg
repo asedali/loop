@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 760" width="1060" height="760" role="img" aria-labelledby="t d" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif">
+  <title id="t">Anatomy of the Phase 3 page</title>
+  <desc id="d">A wireframe of the launch strategy page. It opens with the canvas, shared unchanged from Phase 2, so the user can see the evidence the plan is built on. Below that, a known-gaps card lists every parked block and its workaround, under the sentence that the plan must work around them rather than assume they are solved. Then a generate button produces three parts: funding matches with an unverified disclaimer, go-to-market channels derived from the user's own evidence, and a sequenced action plan of grant, pilot and customer milestones. A side note explains that regenerating keeps every earlier draft.</desc>
+  <style>
+    .bg{fill:#ffffff}
+    .shell{fill:#f7f9fc;stroke:#dde3ee;stroke-width:1.2}
+    .card{fill:#ffffff;stroke:#dde3ee;stroke-width:1}
+    .card2{fill:#f5f8fc;stroke:#e2e8f2;stroke-width:1}
+    .ink{fill:#101827}.ink2{fill:#3b475a}.ink3{fill:#67748a}
+    .t3{fill:#047857}.dk{fill:#e11d48}.wt{fill:#a16207}.mute{fill:#64748b}
+    .sk{fill:#e2e8f0}
+    .warnc{fill:#fffbeb;stroke:#d97706;stroke-width:1.2}
+    .warnt{fill:#7c4a06}
+    .gapc{fill:#fffbeb;stroke:#e2e8f2;stroke-width:1}
+    .pillg{fill:#ecfdf5;stroke:#047857;stroke-width:1}
+    .pillw{fill:#fef3c7;stroke:#d97706;stroke-width:1}
+    .pillm{fill:#f1f5f9;stroke:#cbd5e1;stroke-width:1}
+    .lb{fill:#64748b}
+    .callout{fill:#f0fdf9;stroke:#bbf0dd;stroke-width:1}
+    .callout2{fill:#f8fafc;stroke:#e2e8f2;stroke-width:1}
+    .caps{letter-spacing:.09em;font-size:10.5px;font-weight:700}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#080a0f}
+      .shell{fill:#0d1118;stroke:#232b3a}
+      .card{fill:#161b25;stroke:#232b3a}
+      .card2{fill:#10141c;stroke:#1b2230}
+      .ink{fill:#eef2f9}.ink2{fill:#c2cbd9}.ink3{fill:#8593a8}
+      .t3{fill:#34d399}.dk{fill:#fb7185}.wt{fill:#fbbf24}.mute{fill:#64748b}
+      .sk{fill:#1c2230}
+      .warnc{fill:#1e1808;stroke:#fbbf24}
+      .warnt{fill:#fbbf24}
+      .gapc{fill:#181509;stroke:#232b3a}
+      .pillg{fill:#0c2019;stroke:#34d399}
+      .pillw{fill:#241c07;stroke:#fbbf24}
+      .pillm{fill:#161b25;stroke:#2b3648}
+      .lb{fill:#8593a8}
+      .callout{fill:#0c2019;stroke:#1d5c46}
+      .callout2{fill:#10141c;stroke:#232b3a}
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1060" height="760"/>
+  <text class="ink" x="32" y="38" font-size="21" font-weight="700">Anatomy of the Phase 3 page</text>
+  <text class="ink3" x="32" y="60" font-size="13">Reached when all nine blocks are passed or parked. The same URL, a different template.</text>
+
+  <!-- ================= wireframe ================= -->
+  <rect class="shell" x="32" y="82" width="672" height="646" rx="16"/>
+
+  <!-- header -->
+  <rect class="pillg" x="48" y="98" width="146" height="22" rx="11"/>
+  <text class="t3" x="121" y="113" text-anchor="middle" font-size="10.5" font-weight="700">PHASE 3 · GO TO MARKET</text>
+  <rect class="pillm" x="202" y="98" width="70" height="22" rx="11"/>
+  <text class="t3" x="237" y="113" text-anchor="middle" font-size="10.5" font-weight="700">validated</text>
+  <text class="ink" x="48" y="144" font-size="17" font-weight="700">Potato-farm imaging sensor</text>
+  <rect class="sk" x="48" y="154" width="470" height="8" rx="4"/>
+  <text class="ink3" x="48" y="178" font-size="11.5">9 of 9 blocks resolved by real-world evidence rather than assumption</text>
+
+  <!-- 01 canvas, shared -->
+  <text class="ink" x="48" y="208" font-size="14" font-weight="700">01<tspan class="mute" font-size="11.5" font-weight="400">   Canvas — the identical component Phase 2 renders</tspan></text>
+  <rect class="card" x="48" y="218" width="640" height="76" rx="12"/>
+  <g>
+    <rect class="card2" x="60" y="230" width="84" height="26" rx="5"/>
+    <rect class="card2" x="150" y="230" width="84" height="26" rx="5"/>
+    <rect class="card2" x="240" y="230" width="84" height="26" rx="5"/>
+    <rect class="card2" x="330" y="230" width="96" height="26" rx="5"/>
+    <rect class="card2" x="432" y="230" width="84" height="26" rx="5"/>
+    <rect class="card2" x="522" y="230" width="60" height="26" rx="5"/>
+    <rect class="card2" x="588" y="230" width="88" height="26" rx="5"/>
+    <rect class="card2" x="60" y="262" width="230" height="22" rx="5"/>
+    <rect class="card2" x="296" y="262" width="200" height="22" rx="5"/>
+  </g>
+  <text class="mute" x="48" y="204" font-size="10.5">colour = outcome · every cell still clickable</text>
+
+  <!-- known gaps -->
+  <text class="ink" x="48" y="324" font-size="14" font-weight="700">02<tspan class="mute" font-size="11.5" font-weight="400">   Known gaps in this model</tspan></text>
+  <rect class="gapc" x="48" y="334" width="640" height="96" rx="12"/>
+  <rect class="pillw" x="62" y="346" width="78" height="20" rx="10"/>
+  <text class="wt" x="101" y="360" text-anchor="middle" font-size="10" font-weight="700">2 parked</text>
+  <text class="ink2" x="150" y="360" font-size="11.5">Tested and did not hold. The plan below has to work around them</text>
+  <text class="ink2" x="150" y="376" font-size="11.5">rather than assume they are solved.</text>
+  <rect class="pillm" x="62" y="388" width="112" height="20" rx="10"/>
+  <text class="ink2" x="118" y="402" text-anchor="middle" font-size="10">Key Partners</text>
+  <text class="ink3" x="184" y="402" font-size="11">no distributor will commit — sell direct at launch instead</text>
+  <rect class="pillm" x="62" y="410" width="112" height="20" rx="10"/>
+  <text class="ink2" x="118" y="424" text-anchor="middle" font-size="10">Cost Structure</text>
+  <text class="ink3" x="184" y="424" font-size="11">unit economics only work above 400 units — price for volume</text>
+
+  <!-- generate button -->
+  <rect class="pillg" x="48" y="446" width="264" height="36" rx="9"/>
+  <text class="t3" x="180" y="469" text-anchor="middle" font-size="13" font-weight="700">Generate launch strategy →</text>
+  <text class="mute" x="324" y="469" font-size="11">one AI call</text>
+
+  <!-- 03 funding -->
+  <text class="ink" x="48" y="512" font-size="14" font-weight="700">03<tspan class="mute" font-size="11.5" font-weight="400">   Funding matches</tspan></text>
+  <rect class="warnc" x="48" y="522" width="640" height="46" rx="10"/>
+  <text class="warnt" x="62" y="541" font-size="11.5" font-weight="700">Advisory only — verify every item before you act on it.</text>
+  <text class="ink3" x="62" y="558" font-size="11">Programme <tspan class="ink2">categories</tspan> inferred from your canvas. Not a live grants or VC database — names and</text>
+  <text class="ink3" x="62" y="572" font-size="11">eligibility change without notice, and a model can invent plausible ones.</text>
+
+  <rect class="card" x="48" y="576" width="640" height="38" rx="9"/>
+  <text class="t3" x="64" y="600" font-size="13" font-weight="700">1</text>
+  <text class="ink" x="86" y="600" font-size="12.5" font-weight="600">SBIR/STTR Phase I</text>
+  <text class="ink3" x="86" y="613" font-size="10.5">fits: deep-tech instrumentation at a proof-of-concept stage</text>
+  <text class="dk" x="674" y="600" text-anchor="end" font-size="10" font-weight="600">unverified</text>
+
+  <rect class="card" x="48" y="620" width="640" height="38" rx="9"/>
+  <text class="t3" x="64" y="644" font-size="13" font-weight="700">2</text>
+  <text class="ink" x="86" y="644" font-size="12.5" font-weight="600">University TTO proof-of-concept fund</text>
+  <text class="ink3" x="86" y="657" font-size="10.5">fits: the IP already sits with the lab that built it</text>
+  <text class="dk" x="674" y="644" text-anchor="end" font-size="10" font-weight="600">unverified</text>
+
+  <!-- 04 GTM + plan, side by side -->
+  <text class="ink" x="48" y="688" font-size="14" font-weight="700">04<tspan class="mute" font-size="11.5" font-weight="400">   GTM channels &amp; action plan</tspan></text>
+  <rect class="card" x="48" y="696" width="312" height="0" rx="9"/>
+  <text class="ink3" x="48" y="706" font-size="10.5">Channels derived from your own evidence, not generic advice</text>
+  <text class="ink3" x="380" y="706" font-size="10.5">Action plan sequenced to a grant, a pilot or a paying customer</text>
+
+  <!-- ================= side notes ================= -->
+  <g>
+    <rect class="callout" x="728" y="82" width="300" height="200" rx="12"/>
+    <text class="lb caps" x="746" y="106">THE PAGE OPENS WITH PROOF</text>
+    <text class="ink3" x="746" y="130" font-size="12">The canvas is the identical component</text>
+    <text class="ink3" x="746" y="147" font-size="12">Phase 2 renders, not a re-drawing —</text>
+    <text class="ink3" x="746" y="164" font-size="12">so the two phases cannot drift apart.</text>
+    <text class="ink3" x="746" y="190" font-size="12">You can see the evidence the plan is</text>
+    <text class="ink3" x="746" y="207" font-size="12">about to be built on, gaps included.</text>
+    <text class="ink2" x="746" y="234" font-size="12" font-weight="600">Parked blocks stay visible here.</text>
+    <text class="ink3" x="746" y="254" font-size="12">They are not quietly dropped.</text>
+  </g>
+
+  <g>
+    <rect class="callout2" x="728" y="298" width="300" height="228" rx="12"/>
+    <text class="lb caps" x="746" y="322">HONESTY, THREE TIMES OVER</text>
+    <text class="ink2" x="746" y="346" font-size="12" font-weight="600">1 · in the model prompt</text>
+    <text class="ink3" x="746" y="364" font-size="11.5">Instructed never to invent a</text>
+    <text class="ink3" x="746" y="379" font-size="11.5">deadline, an amount or a link.</text>
+    <text class="ink2" x="746" y="407" font-size="12" font-weight="600">2 · in the page warning</text>
+    <text class="ink3" x="746" y="425" font-size="11.5">Says plainly that this is a</text>
+    <text class="ink3" x="746" y="440" font-size="11.5">reasoning output, not a database.</text>
+    <text class="ink2" x="746" y="468" font-size="12" font-weight="600">3 · on every single item</text>
+    <text class="ink3" x="746" y="486" font-size="11.5">Each match is stamped unverified,</text>
+    <text class="ink3" x="746" y="501" font-size="11.5">with a reason to go and check.</text>
+  </g>
+
+  <g>
+    <rect class="callout2" x="728" y="542" width="300" height="186" rx="12"/>
+    <text class="lb caps" x="746" y="566">REGENERATING</text>
+    <text class="ink3" x="746" y="590" font-size="12">Each generation is stored as a new</text>
+    <text class="ink3" x="746" y="607" font-size="12">row and the newest is shown, so</text>
+    <text class="ink3" x="746" y="624" font-size="12">an earlier draft is never lost.</text>
+    <text class="ink3" x="746" y="650" font-size="12">The GTM channels are required to be</text>
+    <text class="ink3" x="746" y="667" font-size="12">derived from the specific evidence</text>
+    <text class="ink3" x="746" y="684" font-size="12">in your own canvas — which is what</text>
+    <text class="ink3" x="746" y="701" font-size="12">stops Phase 3 being generic advice.</text>
+  </g>
+</svg>

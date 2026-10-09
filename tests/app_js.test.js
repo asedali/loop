@@ -99,6 +99,23 @@ test('phase 1 extract routes to extract', () => {
   assert.strictEqual(stageFor(form('/phase1/extract')), 'extract');
 });
 
+test('all three mentor routes route to challenge', () => {
+  // Three different paths, one stage: the Phase 1 route hangs off /mentor/ and
+  // the other two off /venture/{id}/mentor/, so there is no single suffix to
+  // match on. Getting this wrong shows the log-a-run stage copy instead.
+  assert.strictEqual(stageFor(form('/mentor/idea/42')), 'challenge');
+  assert.strictEqual(stageFor(form('/venture/7/mentor/segment/customer')), 'challenge');
+  assert.strictEqual(stageFor(form('/venture/7/mentor/plan')), 'challenge');
+});
+
+test('the challenge stage exists and claims nothing', () => {
+  // The copy has to be true of the feature: it reads a record and asks questions.
+  assert.ok(STAGES.challenge && STAGES.challenge.length >= 3);
+  const copy = STAGES.challenge.join(' ').toLowerCase();
+  assert.ok(copy.includes('question'), 'the stage copy should say what it produces');
+  assert.ok(!copy.includes('judg'), 'a mentor does not judge — it asks');
+});
+
 test('phase 3 generation routes to strategy', () => {
   assert.strictEqual(stageFor(form('/venture/7/phase3/generate')), 'strategy');
 });
@@ -123,12 +140,17 @@ test('the design stage mentions a hypothesis, which is what the run does', () =>
 });
 
 test('every stage referenced by routing has copy defined', () => {
-  ['extract', 'design', 'analyze', 'retry', 'strategy'].forEach((k) => {
+  // Explicit rather than derived, because the orphan check is the point: a stage
+  // with copy but no route is dead weight that looks maintained. Adding a stage
+  // means adding it here, which is the same kind of deliberate edit as adding a
+  // route.
+  const ROUTED = ['extract', 'design', 'analyze', 'retry', 'strategy', 'challenge'];
+  ROUTED.forEach((k) => {
     assert.ok(Array.isArray(STAGES[k]) && STAGES[k].length, `no copy for stage '${k}'`);
   });
   // and no orphan copy left behind
   Object.keys(STAGES).forEach((k) => {
-    assert.ok(['extract', 'design', 'analyze', 'retry', 'strategy'].includes(k),
+    assert.ok(ROUTED.includes(k),
       `stage '${k}' is defined but never routed to`);
   });
 });

@@ -8,6 +8,17 @@ itsdangerous==2.2.0
 openai==1.51.0
 python-dotenv==1.0.1
 
+# Phase 1 file upload (M1.1). Both parse in-process; see app/upload.py for why
+# that is bounded. python-multipart above is what FastAPI needs for the upload
+# form itself.
+pypdf==5.1.0
+python-docx==1.1.2
+
+# Phase 1 identifier import (M1.2) — the three outbound GETs to ORCID, Crossref
+# and arXiv. Was a tests-only pin before app code needed it; it is a runtime
+# dependency now, so it belongs here and the dev file inherits it.
+httpx==0.28.1
+
 # database
 SQLAlchemy==2.1.1
 psycopg[binary]==3.3.6

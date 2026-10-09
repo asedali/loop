@@ -114,6 +114,15 @@
       'Matching funding categories…',
       'Picking acquisition channels…',
       'Sequencing the action plan…'
+    ],
+    // Not a model call in the sense the others are — nothing here decides
+    // anything — but it is still a call with real latency, so it gets its own
+    // copy. Saying "Judging your idea" would be the wrong claim: it is reading a
+    // record and asking questions about it.
+    challenge: [
+      'Reading what you recorded…',
+      'Applying the playbook…',
+      'Checking the questions are specific…'
     ]
   };
 
@@ -127,6 +136,10 @@
     if (act.indexOf('/retry-analysis') !== -1) return 'retry';
     if (/\/run\/[^/]+\/log$/.test(act)) return 'analyze';
     if (act.indexOf('/phase3/generate') !== -1) return 'strategy';
+    // Checked before the catch-all below, and matched on /mentor rather than a
+    // full route: the three challenge routes live at different paths (/mentor/…
+    // and /venture/{id}/mentor/…) so there is no single suffix to key on.
+    if (act.indexOf('/mentor/') !== -1) return 'challenge';
     return 'analyze';
   }
 

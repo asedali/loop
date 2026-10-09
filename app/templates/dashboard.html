@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "macros.html" import cycle_rail %}
+{% from "macros.html" import cycle_rail, duplicate_note %}
 {% block title %}Ventures — LaunchLoop{% endblock %}
 {% block content %}
 
@@ -12,6 +12,8 @@
 </div>
 <p class="subtitle">Three phases: extract an idea, prove it against real-world evidence,
 then take the validated version to market.</p>
+
+{% if note %}<div class="callout ok" style="margin-top:1rem">{{ note }}</div>{% endif %}
 
 {% if quota_limit %}
   <p class="muted-sm" style="margin-top:.9rem">
@@ -55,11 +57,10 @@ then take the validated version to market.</p>
 {% endif %}
 
 <h2><span class="h2-num">02</span> Candidate ideas</h2>
-{% set candidates = ideas | selectattr("status", "equalto", "candidate") | list %}
 {% if candidates %}
   <div class="grid-2">
     {% for idea in candidates %}
-      <div class="card">
+      <div class="card" id="idea-{{ idea.id }}">
         <div class="row">
           <span class="badge phase1">Idea</span>
           <span class="chip mono">signal: {{ idea.strength_signal }}</span>
@@ -67,19 +68,43 @@ then take the validated version to market.</p>
         <h3 style="margin:.75rem 0 .3rem">{{ idea.title }}</h3>
         <p class="muted" style="margin:0 0 .5rem">{{ idea.commercial_framing }}</p>
         {% if idea.raw_claims %}<p class="muted-sm">Built from: {{ idea.raw_claims }}</p>{% endif %}
-        <form method="post" action="/phase1/select/{{ idea.id }}" style="margin-top:1rem">
-          <button type="submit" class="p2 block">Start validation loop →</button>
-        </form>
+        {{ duplicate_note(idea.id, duplicates.get(idea.id, []), ideas_by_id) }}
+        <div class="row" style="margin-top:1rem;gap:.5rem">
+          <form method="post" action="/phase1/select/{{ idea.id }}">
+            <button type="submit" class="p2">Start validation loop →</button>
+          </form>
+          <form method="post" action="/phase1/dismiss/{{ idea.id }}">
+            <button type="submit" class="ghost sm">Dismiss</button>
+          </form>
+        </div>
       </div>
     {% endfor %}
   </div>
 {% else %}
-  <div class="empty">
-    <div class="empty-title">No candidate ideas</div>
-    <p>Paste a CV excerpt, an abstract, or a thesis chapter and the model will extract
-       commercially-viable ideas from it.</p>
-    <div style="margin-top:1.1rem"><a class="btn p1" href="/phase1/new">+ Extract ideas</a></div>
-  </div>
+  {# A user who has dismissed everything should be told where their cards went,
+     not just shown an empty box — otherwise dismissing looks like losing. #}
+  {% if ideas | selectattr("status", "equalto", "rejected") | list | length %}
+    <div class="empty">
+      <div class="empty-title">No candidate ideas</div>
+      <p>Every card has been dismissed. Nothing was deleted — they are on the
+         <a href="/phase1/ideas">ideas page</a> under Dismissed ideas, and you can
+         restore any of them.</p>
+    </div>
+  {% else %}
+    <div class="empty">
+      <div class="empty-title">No candidate ideas</div>
+      <p>Paste a CV excerpt, an abstract, or a thesis chapter and the model will extract
+         commercially-viable ideas from it.</p>
+      <div style="margin-top:1.1rem"><a class="btn p1" href="/phase1/new">+ Extract ideas</a></div>
+    </div>
+  {% endif %}
 {% endif %}
+
+{# Linked from the dashboard rather than added to the nav: the nav has a
+   route->highlight contract mirrored in app.js's swapIn(), and an account page is
+   not worth touching that contract for. #}
+<p class="muted-sm" style="margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border-soft)">
+  <a href="/account">Account &amp; data</a> — download everything, or delete your account.
+</p>
 
 {% endblock %}

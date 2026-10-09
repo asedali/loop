@@ -2,12 +2,18 @@
 #
 #   1. Push this repo to GitHub, then in Render: New -> Blueprint -> pick the repo.
 #      Render reads this file and creates the service.
-#   2. Render will show the three "sync: false" values as prompts. Paste:
+#   2. Render will show the "sync: false" values as prompts. Paste:
 #        DATABASE_URL      the Supabase SESSION POOLER (port 5432) URI
 #        LLM_API_KEY       your provider key
 #        LLM_BASE_URL      https://opencode.ai/zen/v1
+#        APP_BASE_URL      this service's public URL, e.g. https://launchloop.onrender.com
+#        SMTP_HOST / SMTP_USERNAME / SMTP_PASSWORD   your mail provider's
 #      SESSION_SECRET_KEY is generated for you.
 #   3. First deploy runs the app, which applies migrations on boot.
+#
+# APP_BASE_URL is the one that is easy to forget and hard to debug: it is what
+# every password-reset and email-verification link is built from, so if it is
+# wrong or still localhost, no researcher can recover a forgotten password.
 #
 # Set DATABASE_URL to the session pooler (5432), not the transaction pooler
 # (6543): pgbouncer in transaction mode breaks the server-side prepared
@@ -41,12 +47,24 @@ services:
       # --- plain config ---
       - key: SESSION_HTTPS_ONLY
         value: "1"
+      # Switches to a NOBYPASSRLS role so the RLS policies apply. Inert until
+      # `GRANT launchloop_app TO service_role` is run in the Supabase SQL editor
+      # — see the README. GET /healthz reports {"rls": true|false}.
+      - key: DB_APP_ROLE
+        value: launchloop_app
       - key: LLM_PROVIDER
         value: zen
       - key: LLM_MODEL
         value: space-bunny-free
       - key: LLM_MONTHLY_LIMIT_PER_USER
         value: "500"
+      # Pace limits, in front of the monthly budget. See app/ratelimit.py.
+      - key: LLM_RATE_LIMIT_PER_MIN
+        value: "12"
+      - key: LLM_RATE_LIMIT_IP_PER_MIN
+        value: "60"
+      - key: LLM_RATE_LIMIT_WINDOW_SECONDS
+        value: "60"
       - key: LLM_JSON_MODE
         value: "1"
       - key: LLM_TIMEOUT
@@ -67,3 +85,31 @@ services:
         value: "3"
       - key: LLM_MAX_OUTPUT_TOKENS
         value: "2048"
+
+      # --- transactional email ---
+      # console prints the message to stdout. smtp needs a real provider: with
+      # the sync:false values below unfilled, smtp raises on every send and
+      # send() swallows it, so password reset fails in silence with nothing in
+      # the UI to show for it. Switch this to smtp in the same commit that fills
+      # in SMTP_HOST/SMTP_USERNAME/SMTP_PASSWORD.
+      - key: MAIL_BACKEND
+        value: console
+      - key: APP_BASE_URL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_STARTTLS
+        value: "1"
+      # Email confirmation is deliberately off, and stated explicitly rather
+      # than left to the default so the intent is visible here. It emails a link
+      # on signup and shows unverified accounts a reminder banner; with no
+      # working delivery path that banner would nag every account forever. Set
+      # to 1 only alongside a real provider and a real From domain.
+      - key: EMAIL_VERIFICATION_ENABLED
+        value: "0"

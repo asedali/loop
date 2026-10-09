@@ -1,19 +1,35 @@
 {# Shared UI partials. The Business Model Canvas lives here so Phase 2 and
    Phase 3 render the identical component instead of two drifting copies. #}
 
-{# ---- one canvas block. Every one of the nine is now tracked and clickable,
-        which is why the 'untracked' branch is gone. ---- #}
+{# ---- one canvas block. Every one of the nine is tracked and clickable.
+        `key` doubles as the CSS grid-area hook, so placement is set in
+        style.css rather than inferred from document order here. ---- #}
 {% macro cell(idx, key, label, hero=false, venture_id=None) %}
   {% set el = idx.get(key) %}
-  {# Once a block is resolved its note is the most informative text, so it wins
-     over the hypothesis; before that, the hypothesis is what you want to see. #}
-  {% set body = (el.outcome_note if el and el.outcome in ('passed', 'parked', 'failed')
-                 else el.hypothesis if el else None) or (el.notes if el else None) %}
-  <a class="bmc-cell s-{{ el.status if el else 'untested' }} o-{{ el.outcome if el else 'pending' }}{% if hero %} hero{% endif %}"
+  {# A resolved block shows its ANSWER as the headline: the extracted claim the
+     evidence supports. For a passed block that is the revised hypothesis — for
+     Value Propositions, the value proposition itself. `outcome_note` is the
+     evidence that settled it, so it goes underneath as supporting detail rather
+     than displacing the answer.
+
+     A parked or failed block has no answer to show, only a workaround or a
+     reason, so its note takes the headline. Before anything is decided the
+     hypothesis is the thing being tested, and researcher's own notes trail it. #}
+  {% set passed = el and el.outcome == 'passed' %}
+  {% set answer = (el.hypothesis if passed else el.outcome_note) if el else None %}
+  {% set detail = (el.outcome_note if passed else el.notes) if el else None %}
+  {# Fall back through the chain so a block that has some text never renders as
+     an empty box just because the preferred field was blank. #}
+  {% set answer = answer or el.hypothesis if el else None %}
+  {% set answer = answer or (el.outcome_note if el else None) %}
+  {% set detail = detail if detail != answer else None %}
+  {% set detail = detail or (el.notes if el else None) %}
+  <a class="bmc-cell a-{{ key }} s-{{ el.status if el else 'untested' }} o-{{ el.outcome if el else 'pending' }}{% if hero %} hero{% endif %}"
      {% if venture_id %}href="/venture/{{ venture_id }}/segment/{{ key }}"{% endif %}>
     <div class="name">{{ label }}</div>
     {% if el %}
-      {% if body %}<div class="notes">{{ body[:90] }}</div>{% endif %}
+      {% if answer %}<div class="answer">{{ answer[:400] }}</div>{% endif %}
+      {% if detail %}<div class="notes">{{ detail[:240] }}</div>{% endif %}
       <div class="status-row">
         <span class="badge o-{{ el.outcome }}"><span class="dot"></span>{{ el.outcome }}</span>
         <span class="muted-sm">{{ el.cycle_count }}/{{ el.max_cycles }} runs</span>
@@ -23,7 +39,10 @@
 {% endmacro %}
 
 
-{# ---- the full 9-block canvas, in the canonical Osterwalder layout ---- #}
+{# ---- the full 9-block canvas.
+        Document order is reading order and the mobile stack order; the desktop
+        positions come from the named grid areas in style.css. Keeping both in
+        this order means the canonical layout survives a narrow screen. ---- #}
 {% macro business_model_canvas(segments, venture_id=None) %}
   {% set idx = {} %}
   {% for el in segments %}
@@ -36,8 +55,8 @@
       {{ cell(idx, 'key_resources', 'Key Resources', venture_id=venture_id) }}
       {{ cell(idx, 'value_prop', 'Value Propositions', hero=true, venture_id=venture_id) }}
       {{ cell(idx, 'customer_relationships', 'Customer Relationships', venture_id=venture_id) }}
-      {{ cell(idx, 'customer', 'Customer Segments', venture_id=venture_id) }}
       {{ cell(idx, 'channel', 'Channels', venture_id=venture_id) }}
+      {{ cell(idx, 'customer', 'Customer Segments', venture_id=venture_id) }}
 
       {# bottom financial row: cost structure and revenue streams #}
       <div class="bmc-row-financial">
@@ -99,6 +118,95 @@
           <span class="muted-sm">{{ seg.cycle_count }}/{{ seg.max_cycles }}</span>
         </span>
       </a>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{# ---- "Also extracted as": near-duplicate idea cards (M1.4) ----
+   Partial rather than inline in both places, because the dashboard and the ideas
+   page render the same card and a drifted copy of this note would eventually
+   claim two cards are similar when they are not.
+
+   `similar` is the list of near-duplicate ids for this card, and `by_id` lets the
+   note name them. Both come from app/dedupe.py, computed over exactly the cards
+   the page is showing — so every link here resolves to a card on screen. #}
+{% macro duplicate_note(idea_id, similar, by_id) %}
+  {% if similar %}
+    <p class="dup-note">
+      <span class="chip">≈ {{ similar | length }} similar</span>
+      Also extracted as:
+      {% for other_id in similar %}
+        <a href="#idea-{{ other_id }}">{{ by_id[other_id].title }}</a>{% if not loop.last %},{% endif %}
+      {% endfor %}
+    </p>
+  {% endif %}
+{% endmacro %}
+
+{# ---- one dismissed idea, with the button that brings it back ---- #}
+{% macro dismissed_row(idea) %}
+  <div class="gap-row">
+    <span>{{ idea.title }}</span>
+    <form method="post" action="/phase1/restore/{{ idea.id }}" class="inline">
+      <button type="submit" class="ghost sm">Restore</button>
+    </form>
+  </div>
+{% endmacro %}
+
+{# ---- Mentor challenge panel (M2.1) ----
+   One partial for all three surfaces, because the framing is the same everywhere
+   and a drifted copy would eventually present generated questions with weaker
+   caveats than the first one had — which is the thing this feature exists to
+   avoid.
+
+   `action` is where the form posts, `challenges` are this subject's past
+   challenges, and the catalogue comes from app/mentors.py. #}
+{% macro challenge_panel(action, challenges, heading="Challenge this", subject="") %}
+  <div class="card mentor-panel" style="margin-top:1.5rem">
+    <div class="row">
+      <span class="badge phase2"><span class="dot"></span>Mentor</span>
+      {% if subject %}<span class="muted-sm">{{ subject }}</span>{% endif %}
+    </div>
+    <h3 style="margin:.7rem 0 .35rem;font-size:1rem">{{ heading }}</h3>
+    <p class="muted">
+      Pick an operator's published principles and it will ask you questions about what
+      you have actually recorded. It cannot answer, suggest, or change anything — the
+      decisions stay yours.
+    </p>
+    <form method="post" action="{{ action }}" data-thinking style="margin-top:.9rem">
+      <div class="field" style="margin-bottom:.8rem">
+        <label for="mentor_key">Playbook</label>
+        <select name="mentor_key" id="mentor_key">
+          {% for m in mentors %}
+            <option value="{{ m.key }}">{{ m.label }} — {{ m.attributed_to }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="p2">Ask the hard questions →</button>
+    </form>
+
+    {% for c in challenges %}
+      <div class="mentor-challenge">
+        <div class="row between">
+          <span class="chip">{{ c.mentor_label }} · {{ c.mentor.attributed_to }}</span>
+          <span class="muted-sm">{{ c.created_at | string | truncate(10, true, '') }}</span>
+        </div>
+        <ol class="mentor-qs">
+          {% for q in c.questions_json %}
+            <li>
+              <span class="q">{{ q.question }}</span>
+              {% if q.why_it_matters %}<span class="why">{{ q.why_it_matters }}</span>{% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+        {% if c.dropped_count %}
+          <p class="muted-sm" style="margin-top:.6rem">
+            {{ c.dropped_count }} line{{ '' if c.dropped_count == 1 else 's' }} of the reply
+            {{ 'was' if c.dropped_count == 1 else 'were' }} dropped for speaking in the first
+            person or naming the person, and are not shown here.
+          </p>
+        {% endif %}
+        <p class="disclaimer" style="margin-top:.7rem">{{ mentors_notice }}</p>
+      </div>
     {% endfor %}
   </div>
 {% endmacro %}

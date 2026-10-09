@@ -348,6 +348,15 @@ button.secondary, .btn.secondary {
   box-shadow: none;
 }
 button.secondary:hover, .btn.secondary:hover { background: var(--surface-3); }
+/* Quieter than .secondary, for a choice sitting beside the primary one — "Mark
+   blocked" next to "Mark done" should not read as two equal commitments. */
+button.ghost, .btn.ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+  box-shadow: none;
+}
+button.ghost:hover, .btn.ghost:hover { background: var(--surface-2); color: var(--text); }
 button.danger, .btn.danger { background: rgba(251,113,133,.14); color: var(--disconfirmed); border-color: rgba(251,113,133,.32); box-shadow: none; }
 button.block, .btn.block { width: 100%; }
 button.lg, .btn.lg { padding: .8rem 1.4rem; font-size: .97rem; }
@@ -388,6 +397,21 @@ form.inline, nav form.inline { display: inline; margin: 0; }
 .callout p { margin: .45rem 0 0; }
 .callout p:first-child { margin-top: 0; }
 
+/* The unverified-email nudge sits above <main> rather than inside it, so it spans
+   the full width on every page and survives the app.js <main> swap untouched —
+   a banner that vanishes when you navigate is a banner nobody acts on. */
+.verify-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 1180px;
+  margin: 1rem auto -.4rem;
+  padding: .7rem 1rem;
+}
+.verify-banner button { margin: 0; }
+
 .muted { color: var(--text-muted); font-size: .88rem; }
 .muted-sm { color: var(--text-muted); font-size: .8rem; }
 .disclaimer { font-size: .78rem; color: var(--text-muted); font-style: italic; }
@@ -418,10 +442,22 @@ form.inline, nav form.inline { display: inline; margin: 0; }
 .meter span.s-untested { background: var(--untested); }
 
 /* ==========================================================================
-   Business Model Canvas — the real 9-block Osterwalder layout.
-   The validation loop tracks 5 of the 9 blocks; the other 2 are rendered
-   as inert "not tracked" placeholders rather than silently omitted, so the
-   canvas reads as the genuine article without overstating coverage.
+   Business Model Canvas — the canonical 9-block Osterwalder layout.
+
+   Placement is by named grid areas rather than DOM order, because auto-flow
+   gets the canonical positions wrong: filling five columns in document order
+   lands Customer Segments under Key Partners and Channels in the middle,
+   where the real canvas has Customer Segments as the tall right-hand column
+   with Customer Relationships above Channels.
+
+   The template areas are the whole specification of the layout:
+
+       kp   ka   vp   cr   cs      Key Partners | Key Activities | Value Props
+       kp   kr   vp   ch   cs      (full height) | Key Resources | (full height)
+       fin  fin  fin  fin  fin     Cost Structure | Revenue Streams
+
+   Two rows of equal height, then a shorter financial row. kp, vp and cs span
+   both rows, as in the printed canvas.
    ========================================================================== */
 
 .bmc-wrap { margin: 1.25rem 0 .5rem; }
@@ -429,6 +465,11 @@ form.inline, nav form.inline { display: inline; margin: 0; }
 .bmc {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 1fr 1fr auto;
+  grid-template-areas:
+    "kp ka vp cr cs"
+    "kp kr vp ch cs"
+    "fin fin fin fin fin";
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -449,6 +490,17 @@ form.inline, nav form.inline { display: inline; margin: 0; }
 }
 .bmc-cell:hover { background: linear-gradient(180deg, var(--surface-2), var(--surface-flat)); }
 
+/* named placement — see the area map above */
+.bmc-cell.a-key_partners          { grid-area: kp; }
+.bmc-cell.a-problem               { grid-area: ka; }
+.bmc-cell.a-key_resources         { grid-area: kr; }
+.bmc-cell.a-value_prop            { grid-area: vp; }
+.bmc-cell.a-customer_relationships{ grid-area: cr; }
+.bmc-cell.a-channel               { grid-area: ch; }
+.bmc-cell.a-customer              { grid-area: cs; }
+.bmc-cell.a-cost_structure        { grid-area: fin; }
+.bmc-cell.a-revenue               { grid-area: fin; }
+
 .bmc-cell .name {
   font-size: .72rem;
   font-weight: 700;
@@ -458,12 +510,37 @@ form.inline, nav form.inline { display: inline; margin: 0; }
   margin-bottom: .5rem;
   line-height: 1.3;
 }
-.bmc-cell .notes {
-  font-size: .81rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  margin-top: .5rem;
+
+/* The block's own answer to its own question — for a passed block, the
+   extracted claim the evidence supports. Full contrast because it is the
+   reason the cell exists. */
+.bmc-cell .answer {
+  font-size: .82rem;
+  color: var(--text);
+  line-height: 1.45;
+  margin-top: .1rem;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bmc-cell .answer:empty { display: none; }
+
+/* Supporting line under the answer: the evidence that settled it, or the
+   researcher's free text. Muted, because it is context rather than result. */
+.bmc-cell .notes {
+  font-size: .78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-top: .45rem;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .bmc-cell .notes:empty { display: none; }
 
@@ -488,20 +565,9 @@ form.inline, nav form.inline { display: inline; margin: 0; }
 }
 .bmc-cell.hero .name { color: #cbbafd; }
 
-/* untracked blocks */
-.bmc-cell.untracked { background: var(--surface-flat); opacity: .62; }
-.bmc-cell.untracked .name { color: var(--text-muted); }
-.bmc-cell.untracked::before { background: var(--border-strong); opacity: .5; }
-.bmc-cell .untagged {
-  font-family: var(--mono);
-  font-size: .68rem;
-  color: var(--text-muted);
-  margin-top: .45rem;
-  letter-spacing: .02em;
-}
-
-/* bottom financial row: spans the full canvas width, as in the original layout */
-.bmc-row-financial { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; }
+/* The financial row sits in the `fin` area and splits the full canvas width
+   into its two blocks, exactly as in the printed canvas. */
+.bmc-row-financial { grid-area: fin; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; }
 .bmc-row-financial .bmc-cell { min-height: 92px; }
 
 /* legend */
@@ -516,15 +582,19 @@ form.inline, nav form.inline { display: inline; margin: 0; }
 .bmc-legend span.k { display: inline-flex; align-items: center; gap: .35rem; }
 .bmc-legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 
+/* Narrow screens drop to a single column. The named areas are deliberately NOT
+   redefined here: a grid area only means something inside its own template, so
+   letting `grid-area: auto` take over via the rule below stacks the cells in
+   DOM order — which is reading order for the canonical layout — and the canvas
+   stays legible instead of collapsing into an interleaved mess. */
 @media (max-width: 720px) {
-  .bmc { grid-template-columns: 1fr 1fr; }
-  .bmc-cell { min-height: 108px; }
-  .bmc-cell.hero { grid-column: span 2; }
-}
-@media (max-width: 460px) {
-  .bmc { grid-template-columns: 1fr; }
-  .bmc-cell.hero { grid-column: span 1; }
-  .bmc-row-financial { grid-template-columns: 1fr; }
+  .bmc {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    grid-template-areas: none;
+  }
+  .bmc-cell { grid-area: auto; min-height: 108px; }
+  .bmc-row-financial { grid-area: auto; grid-template-columns: 1fr; }
 }
 
 /* ---------- validation loop ---------- */
@@ -617,6 +687,81 @@ form.inline, nav form.inline { display: inline; margin: 0; }
 }
 .strat-item .strat-body { min-width: 0; }
 .strat-item .strat-body p { margin: .25rem 0 0; color: var(--text-muted); font-size: .88rem; }
+
+/* ---------- action-plan checklist (M3.1) ---------- */
+
+/* The recorded outcome, set apart from the step text it belongs to. Rendered in
+   the researcher's own words, so it is body copy rather than a caption. */
+.strat-note {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  margin-top: .55rem !important;
+  padding: .5rem .65rem;
+  background: var(--surface-2);
+  border-left: 2px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text-2) !important;
+  font-size: .86rem !important;
+}
+.strat-step.is-done .strat-note { border-left-color: var(--confirmed); }
+.strat-step.is-blocked .strat-note { border-left-color: var(--mixed); }
+.strat-step.is-done .strat-num { color: var(--confirmed); background: rgba(52,211,153,.13); border-color: rgba(52,211,153,.35); }
+.strat-step.is-blocked .strat-num { color: var(--mixed); background: rgba(251,191,36,.13); border-color: rgba(251,191,36,.35); }
+.strat-step.is-done .item-title,
+.strat-step.is-blocked .item-title { color: var(--text-muted); }
+
+.step-form { margin-top: .7rem; }
+.step-note-label {
+  display: block;
+  margin-bottom: .3rem;
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.step-note {
+  width: 100%;
+  padding: .5rem .6rem;
+  font: inherit;
+  font-size: .86rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.step-note:focus { outline: 2px solid var(--phase3); outline-offset: 1px; }
+.step-actions { display: flex; gap: .45rem; margin-top: .5rem; flex-wrap: wrap; }
+.step-actions .sm { padding: .35rem .7rem; font-size: .8rem; }
+
+/* Progress over the plan. A bar rather than a fraction alone, because the
+   question this answers is "how much is left", and a filled track answers it
+   faster than reading two numbers. */
+.plan-progress {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  margin-top: .9rem;
+}
+.plan-progress-bar {
+  flex: 1;
+  height: 7px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.plan-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--phase3), #16a97a);
+  transition: width .3s ease;
+}
+.plan-progress-count {
+  flex: none;
+  font-family: var(--mono);
+  font-size: .74rem;
+  color: var(--text-muted);
+}
 
 /* ---------- auth ---------- */
 
@@ -733,7 +878,6 @@ a:hover { color: #c4b5fd; }
 :root[data-theme="light"] .callout.ok { color: #065f46; background: rgba(16, 185, 129, .10); border-color: rgba(5, 150, 105, .3); }
 
 :root[data-theme="light"] .bmc-cell.hero .name { color: #5b21b6; }
-:root[data-theme="light"] .bmc-cell.untracked { opacity: .78; }
 :root[data-theme="light"] .auth-switch { border-top-color: var(--border-soft); }
 
 /* ==========================================================================
@@ -891,6 +1035,12 @@ body.is-busy [data-thinking] { opacity: .55; pointer-events: none; }
 .badge.o-pending { color: var(--text-muted);   background: rgba(100,116,139,.14); border-color: rgba(100,116,139,.3); }
 .badge.o-parked  { color: var(--mixed);        background: rgba(251,191,36,.13); border-color: rgba(251,191,36,.32); }
 .badge.o-failed  { color: var(--disconfirmed); background: rgba(251,113,133,.13); border-color: rgba(251,113,133,.32); }
+/* Action-plan step outcomes (M3.1). Reuses the segment colours deliberately: a
+   step that is blocked and a block that is parked are the same idea — tested,
+   did not hold, survivable — and a second colour for it would mean learning two
+   palettes. */
+.badge.o-done    { color: var(--confirmed);   background: rgba(52,211,153,.13); border-color: rgba(52,211,153,.32); }
+.badge.o-blocked { color: var(--mixed);        background: rgba(251,191,36,.13); border-color: rgba(251,191,36,.32); }
 .badge.sev-critical  { color: var(--phase2);     background: rgba(167,139,250,.1); border-color: rgba(167,139,250,.28); }
 .badge.sev-important { color: var(--text-muted); background: rgba(100,116,139,.12); border-color: rgba(100,116,139,.28); }
 
@@ -981,6 +1131,69 @@ a.bmc-cell:focus { outline: 2px solid var(--phase2); outline-offset: 2px; }
   margin-top: .55rem; font-size: .88rem; color: var(--text-2);
 }
 .gap-row .chip { text-decoration: none; flex-shrink: 0; }
+
+/* ---------- mentor challenges (M2.1) ---------- */
+
+/* The panel is deliberately quieter than the verdict and decision cards. A mentor
+   has no authority in this product, and a panel styled like an action item would
+   imply one. */
+.mentor-panel { border-style: dashed; }
+.mentor-panel h3 { color: var(--text-2); }
+
+.mentor-challenge {
+  margin-top: 1rem;
+  padding: .9rem 1rem;
+  background: var(--surface-2);
+  border-left: 2px solid var(--phase2);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Questions, numbered, with the "why it matters" as a subordinate line — the
+   second sentence is the mentor's reasoning and must not read as part of the
+   question being asked. */
+.mentor-qs { margin: .7rem 0 0; padding-left: 1.3rem; }
+.mentor-qs li { margin-bottom: .7rem; }
+.mentor-qs li:last-child { margin-bottom: 0; }
+.mentor-qs .q { display: block; color: var(--text); font-size: .9rem; }
+.mentor-qs .why {
+  display: block;
+  margin-top: .2rem;
+  color: var(--text-muted);
+  font-size: .82rem;
+}
+
+/* ---------- near-duplicate idea cards (M1.4) ---------- */
+
+/* The "Also extracted as" line. Deliberately quiet: it is a suggestion, and the
+   calibration in app/dedupe.py is a heuristic, so it must not read as a verdict.
+   A hint styled like a warning would be lying about how sure the app is. */
+.dup-note {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin-top: .7rem;
+  padding: .45rem .6rem;
+  background: var(--surface-2);
+  border-left: 2px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: .82rem;
+  color: var(--text-muted);
+}
+.dup-note .chip { text-decoration: none; flex-shrink: 0; }
+.dup-note a { color: var(--phase1); }
+
+/* Dismissed cards. <details> rather than a hidden section so it needs no JS. */
+.dismissed-list {
+  padding: .9rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-2);
+}
+.dismissed-list summary { cursor: pointer; font-size: .9rem; font-weight: 600; }
+.dismissed-list .gap-row { align-items: center; justify-content: space-between; }
+.dismissed-list .gap-row > span { min-width: 0; }
 
 /* run-verdict chips in the history lists */
 .dec-pass    { color: var(--confirmed); }

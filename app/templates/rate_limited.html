@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Slow down — LaunchLoop{% endblock %}
+{% block main_class %}auth-shell{% endblock %}
+{% block content %}
+{# Reached when app/ratelimit.py refuses an LLM request. Rendered in place with a
+   429 rather than redirected, because a redirect would swallow the reason and the
+   original failure mode was exactly that: a rejected call looked like a dead
+   button. No form here — the retry is the user re-submitting, which keeps this
+   page identical with JS off. #}
+<div class="auth-box" style="max-width:480px">
+  <div class="row" style="justify-content:center;margin-bottom:1rem">
+    <span class="badge o-parked"><span class="dot"></span>too many requests</span>
+  </div>
+  <h1 style="text-align:center">Slow down for a moment</h1>
+  <p class="muted" style="text-align:center">
+    You hit the limit of {{ limit }} AI requests per {{ window }} seconds{% if scope_note %}{{ scope_note }}{% endif %}.
+    That's there to keep one account from tying up the server while it waits on
+    the model — not a problem with anything you've done.
+  </p>
+
+  <div class="callout" style="margin-top:1.1rem">
+    <strong>Try again in about {{ retry_after }} second{{ '' if retry_after == 1 else 's' }}.</strong>
+    {% if saved %}{{ saved }}{% else %}
+      Nothing was lost — anything you had already saved is still here.
+    {% endif %}
+  </div>
+
+  <div class="row" style="margin-top:1.3rem">
+    <a class="btn block" href="{{ back_url }}">Back to where you were</a>
+  </div>
+  <p class="muted auth-switch">
+    Your monthly allowance is unaffected — this is a pace limit, not a budget one.
+  </p>
+</div>
+{% endblock %}

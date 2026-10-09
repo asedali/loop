@@ -13,6 +13,6 @@ SQLAlchemy==2.1.1
 psycopg[binary]==3.3.6
 alembic==1.20.0
 
-# tests only
+# tests only. httpx now lives in requirements.txt because app code (identifier
+# import) needs it; the TestClient needs it too, so nothing changes here.
 pytest==8.3.3
-httpx==0.28.1

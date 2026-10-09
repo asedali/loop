@@ -1,0 +1,214 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 980" width="1080" height="980" role="img" aria-labelledby="t d" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif">
+  <title id="t">Anatomy of the Phase 2 page</title>
+  <desc id="d">A wireframe of the validation loop page with four numbered regions. Region 01 at the top is the open block: the panel for whichever canvas block you are working on, showing its hypothesis and a start button. Region 02 is the nine-block board in recommended order, with severity and outcome per block. Region 03 is the full Business Model Canvas, every block clickable. Region 04 is every run across the venture. Side notes explain that the open block is always first, only one panel is ever open and which block wins, that the recommended order is advice you can ignore, and what the run caps cost.</desc>
+  <style>
+    .bg{fill:#ffffff}
+    .shell{fill:#f7f9fc;stroke:#dde3ee;stroke-width:1.2}
+    .card{fill:#ffffff;stroke:#dde3ee;stroke-width:1}
+    .card2{fill:#f5f8fc;stroke:#e2e8f2;stroke-width:1}
+    .rail-t{stroke:#e2e8f2;stroke-width:1}
+    .ink{fill:#101827}.ink2{fill:#3b475a}.ink3{fill:#67748a}
+    .t1{fill:#0284c7}.t2{fill:#7c3aed}.t3{fill:#047857}.dk{fill:#e11d48}
+    .ok{fill:#047857}.mute{fill:#64748b}
+    .sk{fill:#e2e8f0}
+    .pill2{fill:#f6f2ff;stroke:#7c3aed;stroke-width:1}
+    .pillm{fill:#f1f5f9;stroke:#cbd5e1;stroke-width:1}
+    .pillo{fill:#ecfdf5;stroke:#047857;stroke-width:1}
+    .num{fill:#7c3aed}.numc{fill:#ffffff}
+    .lb{fill:#64748b}
+    .callout{fill:#f6f2ff;stroke:#ddd0fb;stroke-width:1}
+    .callout2{fill:#f8fafc;stroke:#e2e8f2;stroke-width:1}
+    .caps{letter-spacing:.09em;font-size:10.5px;font-weight:700}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#080a0f}
+      .shell{fill:#0d1118;stroke:#232b3a}
+      .card{fill:#161b25;stroke:#232b3a}
+      .card2{fill:#10141c;stroke:#1b2230}
+      .rail-t{stroke:#1b2230}
+      .ink{fill:#eef2f9}.ink2{fill:#c2cbd9}.ink3{fill:#8593a8}
+      .t1{fill:#38bdf8}.t2{fill:#a78bfa}.t3{fill:#34d399}.dk{fill:#fb7185}
+      .ok{fill:#34d399}.mute{fill:#64748b}
+      .sk{fill:#1c2230}
+      .pill2{fill:#1a1430;stroke:#a78bfa}
+      .pillm{fill:#161b25;stroke:#2b3648}
+      .pillo{fill:#0c2019;stroke:#34d399}
+      .num{fill:#a78bfa}.numc{fill:#0a0d13}
+      .lb{fill:#8593a8}
+      .callout{fill:#151129;stroke:#3b2f63}
+      .callout2{fill:#10141c;stroke:#232b3a}
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1080" height="980"/>
+  <text class="ink" x="34" y="38" font-size="21" font-weight="700">Anatomy of the Phase 2 page</text>
+  <text class="ink3" x="34" y="60" font-size="13">One open panel, always at the top. Everything else on the page is navigation.</text>
+
+  <!-- ================= wireframe ================= -->
+  <rect class="shell" x="34" y="80" width="700" height="868" rx="16"/>
+
+  <!-- browser chrome -->
+  <rect class="card" x="50" y="96" width="668" height="34" rx="9"/>
+  <rect class="sk" x="66" y="108" width="52" height="10" rx="5"/>
+  <rect class="sk" x="560" y="108" width="44" height="10" rx="5"/>
+  <rect class="sk" x="616" y="108" width="44" height="10" rx="5"/>
+  <rect class="sk" x="672" y="108" width="30" height="10" rx="5"/>
+
+  <!-- header -->
+  <rect class="pillm" x="50" y="144" width="104" height="20" rx="10"/>
+  <text class="ink2" x="102" y="158" text-anchor="middle" font-size="10.5" font-weight="700">PHASE 2 · LOOP</text>
+  <rect class="pillm" x="162" y="144" width="56" height="20" rx="10"/>
+  <text class="ink3" x="190" y="158" text-anchor="middle" font-size="10.5" font-weight="700">active</text>
+  <text class="ink" x="50" y="188" font-size="17" font-weight="700">Potato-farm imaging sensor</text>
+  <rect class="sk" x="50" y="198" width="330" height="8" rx="4"/>
+  <rect class="rail-t" x="50" y="222" width="668" height="6" rx="3"/>
+  <rect class="t2" x="50" y="222" width="170" height="6" rx="3"/>
+  <text class="ink3" x="50" y="244" font-size="11">2 / 27 runs — a runaway backstop, not the real limit</text>
+  <rect class="sk" x="452" y="234" width="180" height="8" rx="4"/>
+
+  <!-- 01 open block -->
+  <circle class="num" cx="62" cy="278" r="11"/>
+  <text class="numc" x="62" y="282" text-anchor="middle" font-size="11" font-weight="700">01</text>
+  <text class="ink" x="82" y="283" font-size="14.5" font-weight="700">Customer Segments</text>
+  <rect class="pill2" x="256" y="270" width="60" height="18" rx="9"/>
+  <text class="t2" x="286" y="283" text-anchor="middle" font-size="10" font-weight="700">critical</text>
+  <rect class="pillm" x="322" y="270" width="66" height="18" rx="9"/>
+  <text class="ink3" x="355" y="283" text-anchor="middle" font-size="10" font-weight="700">pending</text>
+  <rect class="card" x="50" y="300" width="668" height="134" rx="12"/>
+  <rect class="card2" x="66" y="316" width="636" height="46" rx="9"/>
+  <text class="ink3" x="80" y="333" font-size="10" font-weight="700" letter-spacing=".08em">HYPOTHESIS UNDER TEST</text>
+  <rect class="sk" x="80" y="342" width="520" height="8" rx="4"/>
+  <rect class="pill2" x="66" y="378" width="228" height="34" rx="9"/>
+  <text class="t2" x="180" y="399" text-anchor="middle" font-size="13" font-weight="700">Design the first run →</text>
+  <rect class="sk" x="310" y="392" width="240" height="8" rx="4"/>
+
+  <!-- 02 board -->
+  <circle class="num" cx="62" cy="466" r="11"/>
+  <text class="numc" x="62" y="470" text-anchor="middle" font-size="11" font-weight="700">02</text>
+  <text class="ink" x="82" y="471" font-size="14.5" font-weight="700">Blocks</text>
+  <text class="ink3" x="128" y="471" font-size="12">— 1 of 9 resolved</text>
+  <rect class="card" x="50" y="486" width="668" height="152" rx="12"/>
+  <rect class="pill2" x="51" y="487" width="666" height="30" rx="11"/>
+  <text class="t2" x="70" y="507" font-size="11" font-weight="700">1</text>
+  <text class="ink" x="86" y="507" font-size="12.5" font-weight="600">Customer Segments</text>
+  <rect class="pill2" x="552" y="492" width="52" height="18" rx="9"/>
+  <text class="t2" x="578" y="505" text-anchor="middle" font-size="9.5" font-weight="700">critical</text>
+  <rect class="pillm" x="610" y="492" width="58" height="18" rx="9"/>
+  <text class="ink3" x="639" y="505" text-anchor="middle" font-size="9.5" font-weight="700">pending</text>
+  <text class="ink3" x="686" y="507" font-size="10.5">0/3</text>
+  <text class="t2" x="70" y="535" font-size="11" font-weight="700">2</text>
+  <text class="ink2" x="86" y="535" font-size="12.5">Problem &amp; Key Activities</text>
+  <rect class="sk" x="552" y="521" width="52" height="18" rx="9"/>
+  <rect class="sk" x="610" y="521" width="58" height="18" rx="9"/>
+  <text class="ink3" x="686" y="535" font-size="10.5">0/3</text>
+  <text class="t2" x="70" y="563" font-size="11" font-weight="700">3</text>
+  <text class="ink2" x="86" y="563" font-size="12.5">Value Propositions</text>
+  <rect class="sk" x="552" y="549" width="52" height="18" rx="9"/>
+  <rect class="sk" x="610" y="549" width="58" height="18" rx="9"/>
+  <text class="ink3" x="686" y="563" font-size="10.5">0/3</text>
+  <text class="t2" x="70" y="591" font-size="11" font-weight="700">4</text>
+  <text class="ink2" x="86" y="591" font-size="12.5">Revenue Streams</text>
+  <rect class="sk" x="552" y="577" width="52" height="18" rx="9"/>
+  <rect class="sk" x="610" y="577" width="58" height="18" rx="9"/>
+  <text class="ink3" x="686" y="591" font-size="10.5">0/3</text>
+  <text class="mute" x="70" y="620" font-size="11" font-weight="700">5–9</text>
+  <text class="ink3" x="106" y="620" font-size="11.5">Channels · Cost Structure · Key Partners · Key Resources · Customer Relationships</text>
+
+  <!-- 03 canvas -->
+  <circle class="num" cx="62" cy="666" r="11"/>
+  <text class="numc" x="62" y="670" text-anchor="middle" font-size="11" font-weight="700">03</text>
+  <text class="ink" x="82" y="671" font-size="14.5" font-weight="700">Business Model Canvas</text>
+  <text class="ink3" x="300" y="671" font-size="11.5">every block is clickable</text>
+  <rect class="card" x="50" y="686" width="668" height="152" rx="12"/>
+  <!-- row 1 -->
+  <rect class="card2" x="62" y="698" width="128" height="48" rx="7"/>
+  <text class="ink3" x="72" y="714" font-size="10">Key Partners</text>
+  <rect class="sk" x="72" y="722" width="84" height="6" rx="3"/>
+  <rect class="card2" x="198" y="698" width="128" height="48" rx="7"/>
+  <text class="ink3" x="208" y="714" font-size="10">Problem &amp; Key Act.</text>
+  <rect class="sk" x="208" y="722" width="84" height="6" rx="3"/>
+  <rect class="card2" x="334" y="698" width="128" height="48" rx="7"/>
+  <text class="ink3" x="344" y="714" font-size="10">Key Resources</text>
+  <rect class="sk" x="344" y="722" width="84" height="6" rx="3"/>
+  <rect class="pill2" x="470" y="698" width="142" height="48" rx="7"/>
+  <text class="t2" x="480" y="714" font-size="10" font-weight="700">Value Propositions</text>
+  <rect class="sk" x="480" y="722" width="84" height="6" rx="3"/>
+  <rect class="card2" x="620" y="698" width="86" height="48" rx="7"/>
+  <text class="ink3" x="630" y="714" font-size="10">Cust. Rel.</text>
+  <rect class="sk" x="630" y="722" width="52" height="6" rx="3"/>
+  <!-- row 2 -->
+  <rect class="card2" x="62" y="754" width="392" height="38" rx="7"/>
+  <text class="ink3" x="72" y="770" font-size="10">Customer Segments</text>
+  <rect class="sk" x="72" y="778" width="120" height="6" rx="3"/>
+  <rect class="card2" x="462" y="754" width="244" height="38" rx="7"/>
+  <text class="ink3" x="472" y="770" font-size="10">Channels</text>
+  <!-- financial row -->
+  <rect class="card2" x="62" y="800" width="316" height="26" rx="6"/>
+  <text class="ink3" x="72" y="817" font-size="10">Cost Structure</text>
+  <rect class="card2" x="386" y="800" width="320" height="26" rx="6"/>
+  <text class="ink3" x="396" y="817" font-size="10">Revenue Streams</text>
+
+  <!-- 04 runs -->
+  <circle class="num" cx="62" cy="868" r="11"/>
+  <text class="numc" x="62" y="872" text-anchor="middle" font-size="11" font-weight="700">04</text>
+  <text class="ink" x="82" y="873" font-size="14.5" font-weight="700">All runs</text>
+  <text class="ink3" x="152" y="873" font-size="11.5">— across the whole venture</text>
+  <rect class="card" x="50" y="888" width="668" height="48" rx="12"/>
+  <rect class="pillo" x="66" y="902" width="72" height="18" rx="9"/>
+  <text class="ok" x="102" y="915" text-anchor="middle" font-size="9.5" font-weight="700">passed</text>
+  <text class="ink3" x="150" y="915" font-size="11.5">Run 1 · Customer Segments</text>
+  <text class="ink3" x="430" y="915" font-size="11.5">scored</text>
+  <rect class="pillm" x="66" y="924" width="0" height="0"/>
+  <text class="ink3" x="150" y="929" font-size="11.5">Run 2 · in progress</text>
+  <text class="ink3" x="430" y="929" font-size="11.5">awaiting results</text>
+
+  <!-- ================= side notes ================= -->
+  <g>
+    <rect class="callout" x="758" y="80" width="288" height="196" rx="12"/>
+    <text class="lb caps" x="776" y="104">THE OPEN BLOCK IS FIRST</text>
+    <text class="ink" x="776" y="128" font-size="13" font-weight="600">You should never scroll</text>
+    <text class="ink" x="776" y="146" font-size="13" font-weight="600">to find what to do next.</text>
+    <text class="ink3" x="776" y="172" font-size="12">The panel answers that before the</text>
+    <text class="ink3" x="776" y="189" font-size="12">board and the canvas, which exist</text>
+    <text class="ink3" x="776" y="206" font-size="12">only to navigate.</text>
+    <text class="ink3" x="776" y="232" font-size="12">An error re-renders here too, with</text>
+    <text class="ink3" x="776" y="249" font-size="12">your block still open.</text>
+  </g>
+
+  <g>
+    <rect class="callout" x="758" y="292" width="288" height="216" rx="12"/>
+    <text class="lb caps" x="776" y="316">ONE PANEL, ALWAYS</text>
+    <text class="ink3" x="776" y="340" font-size="12">Which block opens follows a</text>
+    <text class="ink3" x="776" y="357" font-size="12">fixed priority order:</text>
+    <text class="ink2" x="776" y="384" font-size="12" font-weight="600">1 · the block named in the URL</text>
+    <text class="ink2" x="776" y="405" font-size="12" font-weight="600">2 · the one with a run in flight</text>
+    <text class="ink2" x="776" y="426" font-size="12" font-weight="600">3 · one awaiting a decision</text>
+    <text class="ink2" x="776" y="447" font-size="12" font-weight="600">4 · the next one we'd attack</text>
+    <text class="ink3" x="776" y="474" font-size="12">So the page always has exactly</text>
+    <text class="ink3" x="776" y="491" font-size="12">one obvious next step.</text>
+  </g>
+
+  <g>
+    <rect class="callout2" x="758" y="524" width="288" height="196" rx="12"/>
+    <text class="lb caps" x="776" y="548">THE ORDER IS ADVICE</text>
+    <text class="ink3" x="776" y="572" font-size="12">Four blocks are critical, five are</text>
+    <text class="ink3" x="776" y="589" font-size="12">important. The loop front-loads</text>
+    <text class="ink3" x="776" y="606" font-size="12">the assumptions that are most fatal</text>
+    <text class="ink3" x="776" y="623" font-size="12">to get wrong.</text>
+    <text class="ink" x="776" y="652" font-size="12" font-weight="600">If you already know your channel</text>
+    <text class="ink" x="776" y="669" font-size="12" font-weight="600">is dead, test pricing first.</text>
+    <text class="ink3" x="776" y="696" font-size="12">The app does not argue.</text>
+  </g>
+
+  <g>
+    <rect class="callout2" x="758" y="736" width="288" height="200" rx="12"/>
+    <text class="lb caps" x="776" y="760">WHAT THE CAPS COST</text>
+    <text class="ink3" x="776" y="784" font-size="12">Each block gets 3 runs. Running</text>
+    <text class="ink3" x="776" y="801" font-size="12">out parks that block alone and asks</text>
+    <text class="ink3" x="776" y="818" font-size="12">for a decision: three more runs, or</text>
+    <text class="ink3" x="776" y="835" font-size="12">park it with a note.</text>
+    <text class="ink3" x="776" y="860" font-size="12">Parking counts as resolved — a</text>
+    <text class="ink3" x="776" y="877" font-size="12">documented gap is a real outcome.</text>
+    <text class="ink2" x="776" y="906" font-size="12" font-weight="600">≈54 AI calls per full validation.</text>
+    <text class="ink3" x="776" y="924" font-size="12">Default monthly cap: 500.</text>
+  </g>
+</svg>

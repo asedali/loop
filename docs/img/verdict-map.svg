@@ -1,0 +1,133 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 700" width="1040" height="700" role="img" aria-labelledby="t d" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif">
+  <title id="t">What each verdict does</title>
+  <desc id="d">A map from the four run verdicts to their effect. Pass marks the block passed and permanently resolved. Iterate keeps the block open, marks the evidence mixed and sharpens the hypothesis for another run. Fail splits on severity: on a critical block it marks the block failed and hands the decision to the user as kill or pivot, with no default; on an important block it parks that one block with a workaround and the venture carries on. Pivot spawns a sibling venture on a fresh canvas. A footnote notes that evidence and decision are stored in separate columns so a passed block with thin evidence stays a visible question.</desc>
+  <style>
+    .bg{fill:#ffffff}
+    .pnl{fill:#f5f8fc;stroke:#dde3ee;stroke-width:1}
+    .pnl2{fill:#ffffff;stroke:#dde3ee;stroke-width:1}
+    .ink{fill:#101827}.ink2{fill:#3b475a}.ink3{fill:#67748a}
+    .t1{fill:#0284c7}.t2{fill:#7c3aed}.t3{fill:#047857}
+    .ok{fill:#047857}.dk{fill:#e11d48}.wt{fill:#a16207}.mute{fill:#64748b}
+    .fok{fill:#047857;fill-opacity:.10}.fd{fill:#e11d48;fill-opacity:.09}
+    .fw{fill:#a16207;fill-opacity:.11}.f2{fill:#7c3aed;fill-opacity:.09}
+    .f3{fill:#047857;fill-opacity:.09}
+    .st{stroke:#94a3b8}.stk{stroke:#047857}.std{stroke:#e11d48}.stw{stroke:#c08a2a}.st2{stroke:#7c3aed}
+    .caps{letter-spacing:.09em;font-size:10.5px;font-weight:700}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#080a0f}
+      .pnl{fill:#10141c;stroke:#232b3a}
+      .pnl2{fill:#161b25;stroke:#232b3a}
+      .ink{fill:#eef2f9}.ink2{fill:#c2cbd9}.ink3{fill:#8593a8}
+      .t1{fill:#38bdf8}.t2{fill:#a78bfa}.t3{fill:#34d399}
+      .ok{fill:#34d399}.dk{fill:#fb7185}.wt{fill:#fbbf24}.mute{fill:#64748b}
+      .fok{fill:#34d399;fill-opacity:.13}.fd{fill:#fb7185;fill-opacity:.12}
+      .fw{fill:#fbbf24;fill-opacity:.12}.f2{fill:#a78bfa;fill-opacity:.13}
+      .f3{fill:#34d399;fill-opacity:.13}
+      .st{stroke:#64748b}.stk{stroke:#34d399}.std{stroke:#fb7185}.stw{stroke:#fbbf24}.st2{stroke:#a78bfa}
+    }
+  </style>
+  <defs>
+    <marker id="s0" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 .6 L7.4 4 L0 7.4 z" fill="#94a3b8"/></marker>
+    <marker id="sk" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 .6 L7.4 4 L0 7.4 z" fill="#047857"/></marker>
+    <marker id="sd" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 .6 L7.4 4 L0 7.4 z" fill="#e11d48"/></marker>
+    <marker id="sw" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 .6 L7.4 4 L0 7.4 z" fill="#c08a2a"/></marker>
+    <marker id="s2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 .6 L7.4 4 L0 7.4 z" fill="#7c3aed"/></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1040" height="700"/>
+  <text class="ink" x="32" y="40" font-size="21" font-weight="700">What each verdict actually does</text>
+  <text class="ink3" x="32" y="62" font-size="13">Four verdicts. One of them changes the block. One of them changes the venture. Only one of them changes neither.</text>
+
+  <!-- ======== header row ======== -->
+  <text class="mute caps" x="56" y="100">VERDICT</text>
+  <text class="mute caps" x="272" y="100">THE BLOCK BECOMES</text>
+  <text class="mute caps" x="600" y="100">THE VENTURE</text>
+
+  <!-- ======== PASS ======== -->
+  <rect class="pnl" x="32" y="112" width="976" height="88" rx="12"/>
+  <rect class="fok" x="32" y="112" width="5" height="88" rx="2.5"/>
+  <rect class="pnl2" x="56" y="136" width="120" height="40" rx="9"/>
+  <text class="ok" x="116" y="162" text-anchor="middle" font-size="15" font-weight="700">pass</text>
+  <text class="ink3" x="116" y="186" text-anchor="middle" font-size="11">evidence met it</text>
+  <path class="stk" d="M182 156 H266" fill="none" stroke-width="1.6" marker-end="url(#sk)"/>
+  <rect class="fok" x="272" y="128" width="200" height="56" rx="9"/>
+  <text class="ok" x="288" y="150" font-size="13" font-weight="700">passed · confirmed</text>
+  <text class="ink3" x="288" y="170" font-size="11.5">permanent. no more runs on it.</text>
+  <path class="st" d="M478 156 H594" fill="none" stroke-width="1.6" marker-end="url(#s0)"/>
+  <text class="ink3" x="600" y="152" font-size="12.5">Unchanged. One block closer to launch.</text>
+  <text class="ink3" x="600" y="172" font-size="11.5">If it was the last open block, Phase 3 unlocks.</text>
+
+  <!-- ======== ITERATE ======== -->
+  <rect class="pnl" x="32" y="212" width="976" height="96" rx="12"/>
+  <rect class="fw" x="32" y="212" width="5" height="96" rx="2.5"/>
+  <rect class="pnl2" x="56" y="240" width="120" height="40" rx="9"/>
+  <text class="wt" x="116" y="266" text-anchor="middle" font-size="15" font-weight="700">iterate</text>
+  <text class="ink3" x="116" y="290" text-anchor="middle" font-size="11">thin or mixed</text>
+  <path class="stw" d="M182 260 H266" fill="none" stroke-width="1.6" marker-end="url(#sw)"/>
+  <rect class="fw" x="272" y="228" width="200" height="64" rx="9"/>
+  <text class="wt" x="288" y="250" font-size="13" font-weight="700">active · mixed</text>
+  <text class="ink3" x="288" y="268" font-size="11.5">hypothesis rewritten, sharper</text>
+  <text class="ink3" x="288" y="284" font-size="11.5">run again — up to 3, then park</text>
+  <path class="stw" d="M478 260 H594" fill="none" stroke-width="1.6" marker-end="url(#sw)"/>
+  <text class="ink3" x="600" y="252" font-size="12.5">Unchanged — still going.</text>
+  <text class="ink3" x="600" y="272" font-size="11.5">The next run is told what already failed,</text>
+  <text class="ink3" x="600" y="288" font-size="11.5">so it does not repeat the same mistake.</text>
+
+  <!-- ======== FAIL: the severity fork ======== -->
+  <rect class="pnl" x="32" y="320" width="976" height="256" rx="12"/>
+  <rect class="fd" x="32" y="320" width="5" height="256" rx="2.5"/>
+  <rect class="pnl2" x="56" y="424" width="120" height="40" rx="9"/>
+  <text class="dk" x="116" y="450" text-anchor="middle" font-size="15" font-weight="700">fail</text>
+  <text class="ink3" x="116" y="474" text-anchor="middle" font-size="11">disconfirmed</text>
+
+  <!-- the fork -->
+  <path class="st" d="M182 444 H232" fill="none" stroke-width="1.6"/>
+  <path class="st" d="M232 444 V374 H266" fill="none" stroke-width="1.6" marker-end="url(#s0)"/>
+  <path class="st" d="M232 444 V518 H266" fill="none" stroke-width="1.6" marker-end="url(#s0)"/>
+  <rect class="pnl2" x="188" y="336" width="76" height="20" rx="10"/>
+  <text class="ink3" x="226" y="350" text-anchor="middle" font-size="10.5" font-weight="700">critical?</text>
+  <rect class="pnl2" x="188" y="506" width="76" height="20" rx="10"/>
+  <text class="ink3" x="226" y="520" text-anchor="middle" font-size="10.5" font-weight="700">important?</text>
+
+  <!-- critical branch -->
+  <rect class="fd" x="272" y="332" width="200" height="88" rx="9"/>
+  <text class="dk" x="288" y="354" font-size="13" font-weight="700">failed · disconfirmed</text>
+  <text class="ink3" x="288" y="372" font-size="11.5">counts as unresolved, so</text>
+  <text class="ink3" x="288" y="388" font-size="11.5">Phase 3 cannot unlock</text>
+  <text class="ink3" x="288" y="406" font-size="11.5">while this is outstanding</text>
+  <path class="std" d="M478 376 H594" fill="none" stroke-width="1.6" marker-end="url(#sd)"/>
+  <rect class="fd" x="600" y="336" width="392" height="80" rx="9"/>
+  <text class="dk" x="616" y="358" font-size="13" font-weight="700">The venture does NOT end. You choose.</text>
+  <text class="ink3" x="616" y="378" font-size="11.5">A kill-or-pivot card with the model's reasoning attached,</text>
+  <text class="ink3" x="616" y="394" font-size="11.5">no default selected. The model usually recommends killing</text>
+  <text class="ink3" x="616" y="410" font-size="11.5">it — and that call is deliberately not the model's to make.</text>
+
+  <!-- important branch -->
+  <rect class="fw" x="272" y="480" width="200" height="76" rx="9"/>
+  <text class="wt" x="288" y="502" font-size="13" font-weight="700">parked · mixed</text>
+  <text class="ink3" x="288" y="520" font-size="11.5">with a recorded workaround,</text>
+  <text class="ink3" x="288" y="536" font-size="11.5">e.g. resell via a distributor</text>
+  <path class="stw" d="M478 518 H594" fill="none" stroke-width="1.6" marker-end="url(#sw)"/>
+  <rect class="fw" x="600" y="484" width="392" height="68" rx="9"/>
+  <text class="ink3" x="616" y="506" font-size="12.5">The venture carries on. Parking counts as resolved, and</text>
+  <text class="ink3" x="616" y="524" font-size="12.5">the note is carried into the launch prompt, so the gap</text>
+  <text class="ink3" x="616" y="542" font-size="12.5">is documented rather than quietly dropped.</text>
+
+  <!-- ======== PIVOT ======== -->
+  <rect class="pnl" x="32" y="588" width="976" height="80" rx="12"/>
+  <rect class="f2" x="32" y="588" width="5" height="80" rx="2.5"/>
+  <rect class="pnl2" x="56" y="608" width="120" height="40" rx="9"/>
+  <text class="t2" x="116" y="634" text-anchor="middle" font-size="15" font-weight="700">pivot</text>
+  <text class="ink3" x="116" y="658" text-anchor="middle" font-size="11">can't work as imagined</text>
+  <path class="st2" d="M182 628 H266" fill="none" stroke-width="1.6" marker-end="url(#s2)"/>
+  <rect class="f2" x="272" y="600" width="200" height="56" rx="9"/>
+  <text class="t2" x="288" y="622" font-size="13" font-weight="700">a new venture</text>
+  <text class="ink3" x="288" y="640" font-size="11.5">fresh nine-block canvas</text>
+  <path class="st2" d="M478 628 H594" fill="none" stroke-width="1.6" marker-end="url(#s2)"/>
+  <text class="ink2" x="600" y="620" font-size="12.5" font-weight="600">This one is marked “pivoted” and keeps a link to its child.</text>
+  <text class="ink3" x="600" y="640" font-size="11.5">Every block already passed carries across with its evidence — a pivot</text>
+  <text class="ink3" x="600" y="656" font-size="11.5">changes one hypothesis, not the eight you proved around it.</text>
+
+  <!-- ======== footnote ======== -->
+  <text class="ink3" x="32" y="690" font-size="11.5">Evidence and decision are stored in two separate columns, so “passed, but the evidence was thin” stays a question you can still ask.</text>
+</svg>

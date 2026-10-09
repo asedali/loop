@@ -1,16 +1,26 @@
+import json
 import os
 import traceback
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, config, db, llm, quota
-from .constants import is_critical
+from . import (
+    auth, config, db, dedupe, llm, mailer, mentors, quota, ratelimit, sources,
+    upload,
+)
+from .constants import (
+    ACTION_STEP_STATUSES,
+    MENTOR_KEYS,
+    MENTOR_SUBJECT_KINDS,
+    is_critical,
+)
 
 # Every knob below is read from app/config.py, which reads the environment (and
 # .env) once. See .env.example for the full list and each default.
@@ -38,6 +48,20 @@ SESSION_HTTPS_ONLY = config.SESSION_HTTPS_ONLY
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     db.init_db()
+    # Name the NOBYPASSRLS role so get_conn() switches to it and the RLS policies
+    # actually apply. Without this the connection stays as whatever
+    # DATABASE_URL says — which on Supabase is service_role, and service_role
+    # bypasses every policy regardless of FORCE.
+    db.set_app_role(config.db_app_role())
+    if db.rls_active():
+        print(f"[boot] row-level security ACTIVE (role {config.db_app_role()!r})")
+    else:
+        print(
+            f"[boot] row-level security INERT: the current role bypasses RLS.\n"
+            f"[boot] Tenant isolation rests on the user_id filters in app/db.py alone.\n"
+            f"[boot] To fix: create a NOBYPASSRLS role, GRANT it to the connecting "
+            f"role, and set DB_APP_ROLE to its name."
+        )
     yield
 
 
@@ -52,6 +76,19 @@ app.add_middleware(
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
+# The mentor catalogue and its "this is not a quote" notice are available to every
+# template as globals rather than being passed through each render call. They are
+# static, they are needed by a shared macro on three different pages, and adding a
+# context key to three render sites for a constant is exactly the drift this repo
+# keeps fixing elsewhere. db.py's equivalent note is invariant 10.
+templates.env.globals["mentors"] = mentors.all_mentors()
+templates.env.globals["mentors_notice"] = mentors.NOT_A_QUOTE
+
+# The function itself, not its result, so the flag is read per render rather
+# than frozen at import — and so it reaches the 429 and 500 handlers, which
+# build their context by hand and never go through render().
+templates.env.globals["email_verification_enabled"] = config.email_verification_enabled
 
 
 def render(request, template_name, **context):
@@ -71,7 +108,6 @@ def back_to_venture(venture_id: int, message: str = None) -> RedirectResponse:
     like the button simply not working."""
     url = f"/venture/{venture_id}"
     if message:
-        from urllib.parse import quote
         url += f"?err={quote(message[:300])}"
     return RedirectResponse(url=url, status_code=303)
 
@@ -81,6 +117,48 @@ def login_or_redirect(request: Request):
     if not user:
         return None, RedirectResponse(url="/login", status_code=303)
     return user, None
+
+
+def _client_ip(request: Request) -> str | None:
+    return request.client.host if request.client else None
+
+
+def throttle_llm(request: Request, user_id: int, back_url: str, saved: str = None) -> Response:
+    """Per-request rate limit for the routes that call the model.
+
+    Returns None when the request may proceed, or the 429 response when it may
+    not. The check is a single `ratelimit.check` call — it spends a token only
+    when the request is allowed, and the number it returns on refusal is the
+    same number the page quotes, so the two cannot disagree.
+
+    Rendered in place rather than redirected, with a real reason and a way back,
+    because the failure mode this replaces was a swallowed refusal that looked
+    like a dead button.
+    """
+    retry_after = ratelimit.check(user_id, _client_ip(request))
+    if retry_after is None:
+        return None
+
+    per_user = config.llm_rate_limit_per_min()
+    per_ip = config.llm_rate_limit_ip_per_min()
+    # Name the tighter of the two, so the sentence matches the bucket that fired.
+    scope_note = " from your network" if per_ip and (not per_user or per_ip <= per_user) else ""
+    response = templates.TemplateResponse(
+        request,
+        "rate_limited.html",
+        {
+            "user": auth.get_current_user(request),
+            "limit": min([v for v in (per_user, per_ip) if v] or [0]),
+            "window": config.llm_rate_limit_window_seconds(),
+            "retry_after": retry_after,
+            "back_url": back_url,
+            "saved": saved,
+            "scope_note": scope_note,
+        },
+        status_code=429,
+    )
+    response.headers["Retry-After"] = str(retry_after)
+    return response
 
 
 @app.exception_handler(500)
@@ -105,12 +183,18 @@ async def server_error(request: Request, exc: Exception):
 
 @app.get("/healthz")
 def healthz():
-    """Liveness + DB reachability, for the Fly health check. Deliberately does
+    """Liveness + DB reachability, for the deploy health check. Deliberately does
     not touch the LLM provider: a provider outage shouldn't fail the deploy
-    health check and get the machine cycled."""
+    health check and get the machine cycled.
+
+    `rls` is reported rather than assumed. A connection as a superuser or as
+    Supabase's service_role bypasses every RLS policy regardless of FORCE, so a
+    deploy can have the policies installed and still have no enforcement — and
+    that is exactly the sort of thing that should be visible rather than assumed.
+    """
     if not db.ping():
-        return {"status": "degraded"}
-    return {"status": "ok"}
+        return {"status": "degraded", "rls": False}
+    return {"status": "ok", "rls": db.rls_active()}
 
 
 # ==================== Auth ====================
@@ -130,6 +214,9 @@ def signup_form(request: Request):
 @app.post("/signup")
 def signup(request: Request, email: str = Form(...), password: str = Form(...)):
     email = email.strip().lower()
+    # Pre-authentication: no session yet, so the lookup runs under the
+    # address-scoped policy instead of a tenant.
+    auth.as_lookup_email(email)
     if db.get_user_by_email(email):
         return render(request, "signup.html", error="An account with that email already exists.", email=email)
     if len(password) < config.min_password_length():
@@ -139,35 +226,203 @@ def signup(request: Request, email: str = Form(...), password: str = Form(...)):
             email=email,
         )
     user_id = db.create_user(email, auth.hash_password(password))
-    request.session["user_id"] = user_id
+    # Best-effort and never blocking: a mail outage must not stop someone signing
+    # up, and the unverified banner still lets them work while it is sorted.
+    db.set_tenant(user_id=user_id, lookup_email=email)
+    if config.email_verification_enabled():
+        _issue_email_verification(user_id, email)
+    # start_session, not a bare assignment: the session has to carry the epoch
+    # that get_current_user() compares, and this is the second of the two places
+    # that write one. See auth.start_session.
+    auth.start_session(request, db.get_user_by_id(user_id))
     return RedirectResponse(url="/dashboard", status_code=303)
+
+
+# ---------------- password reset + email verification ----------------
+
+# The forgot-password response is deliberately identical for every outcome —
+# registered, unregistered, or mail provider down. Anything that varied would
+# turn that form into an account enumeration oracle, so even the redirect target
+# does not differ.
+_RESET_EXPIRED = "That link is invalid or has expired. Request a new one."
+
+
+def _token_expiry():
+    return db.now() + timedelta(minutes=config.password_reset_token_minutes())
+
+
+def _issue_email_verification(user_id: int, email: str):
+    plaintext, token_hash = auth.new_token()
+    db.create_reset_token(user_id, "email_verify", token_hash, _token_expiry())
+    return mailer.send_email_verification(email, plaintext)
+
+
+def _issue_password_reset(user_id: int, email: str):
+    plaintext, token_hash = auth.new_token()
+    db.create_reset_token(user_id, "password_reset", token_hash, _token_expiry())
+    return mailer.send_password_reset(email, plaintext)
+
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+def forgot_password_form(request: Request):
+    return render(request, "forgot_password.html", error=None,
+                  sent=request.query_params.get("sent") == "1",
+                  token_minutes=config.password_reset_token_minutes(), email="")
+
+
+@app.post("/forgot-password")
+def forgot_password(request: Request, email: str = Form(...)):
+    email = email.strip().lower()
+    auth.as_lookup_email(email)
+    user = db.get_user_by_email(email)
+    if user:
+        # From here on the work touches that user's own rows, so the tenant is
+        # installed — the pre-auth lookup above only covered reading `users`.
+        db.set_tenant(user_id=user["id"], lookup_email=email)
+        _issue_password_reset(user["id"], user["email"])
+    # Same redirect whether the account exists, does not exist, or the mail
+    # provider is down. A mail failure is not reported here: telling the user
+    # "we couldn't send it" would also tell them the account exists.
+    return RedirectResponse(url="/forgot-password?sent=1", status_code=303)
+
+
+def _resolve_token(token: str, purpose: str):
+    """Find the row a presented token points at, and install that row's tenant.
+
+    The RLS policy admits this one row by token hash, because the token is the
+    credential the user holds *before* anyone knows whose account it belongs to —
+    the same shape as the address-scoped login lookup. Once resolved, every write
+    runs under the real tenant.
+    """
+    if not token:
+        db.clear_tenant()
+        return None
+    token_hash = auth.hash_token(token)
+    db.set_tenant(lookup_token=token_hash)
+    row = db.redeemable_token(token_hash, purpose)
+    if row:
+        db.set_tenant(user_id=row["user_id"], lookup_token=token_hash)
+    return row
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+def reset_password_form(request: Request):
+    done = request.query_params.get("done") == "1"
+    token = request.query_params.get("token") or ""
+    # A used token is now the normal state of this page after a successful reset,
+    # so `done` is checked before the token is validated.
+    row = _resolve_token(token, "password_reset")
+    return render(request, "reset_password.html",
+                  error=None if (done or row) else _RESET_EXPIRED,
+                  token=token, done=done,
+                  token_minutes=config.password_reset_token_minutes())
+
+
+@app.post("/reset-password")
+async def reset_password(request: Request):
+    form = await request.form()
+    token = str(form.get("token", "")).strip()
+    password = str(form.get("password", ""))
+    confirm = str(form.get("confirm", ""))
+
+    row = _resolve_token(token, "password_reset")
+
+    def back(error):
+        return render(request, "reset_password.html", error=error, token=token,
+                      done=False,
+                      token_minutes=config.password_reset_token_minutes())
+
+    if not row:
+        # Checked before the password, so an invalid link and a weak password
+        # cannot be told apart from the error message.
+        return back(_RESET_EXPIRED)
+    if password != confirm:
+        return back("Those two passwords do not match.")
+    if len(password) < config.min_password_length():
+        return back(f"Password must be at least {config.min_password_length()} characters.")
+    if len(password.encode("utf-8")) > auth.MAX_PASSWORD_BYTES:
+        return back(f"Password must be at most {auth.MAX_PASSWORD_BYTES} bytes.")
+
+    db.set_password(row["user_id"], auth.hash_password(password))
+    # Burn this token and every other live reset token for the account, so a link
+    # captured before the reset cannot be used after it.
+    db.consume_user_tokens(row["user_id"], "password_reset")
+    return RedirectResponse(url="/reset-password?done=1", status_code=303)
+
+
+@app.get("/verify-email", response_class=HTMLResponse)
+def verify_email(request: Request):
+    """Confirm an address from the link in the email.
+
+    A GET because it is a link the user clicks. A third party cannot trigger it
+    without the token, and a confirm button would add a step to every account.
+    The deliberate POST — resending — is its own route below.
+    """
+    row = _resolve_token(request.query_params.get("token") or "", "email_verify")
+    if row:
+        db.mark_email_verified(row["user_id"])
+        db.consume_reset_token(row["id"])
+        return RedirectResponse(url="/dashboard?note=Email+confirmed.+Thank+you.",
+                                status_code=303)
+    return RedirectResponse(url=f"/login?err={quote(_RESET_EXPIRED)}", status_code=303)
+
+
+@app.post("/resend-verification")
+def resend_verification(request: Request):
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    # With the flag off no link was ever sent, so there is nothing to resend.
+    # The route stays mounted so a stale bookmark from an earlier build lands
+    # somewhere honest instead of a bare 404.
+    if not config.email_verification_enabled():
+        note = "Email confirmation is not enabled."
+    elif user["email_verified_at"] is None:
+        _issue_email_verification(user["id"], user["email"])
+        note = "Verification email sent. Check your inbox."
+    else:
+        note = "That address is already confirmed."
+    return RedirectResponse(url=f"/dashboard?note={quote(note)}", status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)
 def login_form(request: Request):
-    return render(request, "login.html", error=None, email="")
+    return render(request, "login.html", error=request.query_params.get("err") or None,
+                  note=request.query_params.get("note") or None, email="")
 
 
 @app.post("/login")
 def login(request: Request, email: str = Form(...), password: str = Form(...)):
     email = email.strip().lower()
+    ip = _client_ip(request)
+    auth.as_lookup_email(email)
 
     window = config.login_window_minutes()
     since = datetime.now(timezone.utc) - timedelta(minutes=window)
+    locked = (
+        "Too many failed attempts. Try again in "
+        f"{window} minutes."
+    )
+    # Two counters, because they catch different attacks. Per-email stops password
+    # guessing against one account; per-IP stops one address spraying a single
+    # password across thousands of accounts, where every individual account has
+    # exactly one failed attempt and looks innocent.
     if db.recent_failed_logins(email, since) >= config.max_failed_logins():
-        return render(
-            request, "login.html",
-            error=f"Too many failed attempts. Try again in {window} minutes.",
-            email=email,
-        )
+        return render(request, "login.html", error=locked, email=email)
+    if db.recent_failed_logins_from_ip(ip, since) >= config.max_failed_logins() * 5:
+        return render(request, "login.html", error=locked, email=email)
 
     user = db.get_user_by_email(email)
     ok = bool(user) and auth.verify_password(password, user["password_hash"])
-    db.record_login_attempt(email, request.client.host if request.client else None, ok)
+    db.record_login_attempt(email, ip, ok)
     if not ok:
         return render(request, "login.html", error="Invalid email or password.", email=email)
 
-    request.session["user_id"] = user["id"]
+    # Clear the failure history on success. Without this, six typos in a row lock
+    # the account out for the rest of the window and the *next* legitimate login
+    # is refused — which reads as the app being broken, not as a security feature.
+    db.clear_failed_logins(email)
+    auth.start_session(request, user)
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
@@ -191,13 +446,21 @@ def dashboard(request: Request):
     user, redirect = login_or_redirect(request)
     if redirect:
         return redirect
+    ideas = db.list_ideas(user["id"])
+    candidates = [i for i in ideas if i["status"] == "candidate"]
     return render(
         request, "dashboard.html",
-        ideas=db.list_ideas(user["id"]),
+        ideas=ideas,
+        candidates=candidates,
+        # Over the candidate set this page renders, so every "Also extracted as"
+        # link points at a card that is actually on screen.
+        duplicates=dedupe.find_near_duplicates(candidates),
+        ideas_by_id={i["id"]: i for i in candidates},
         ventures=db.list_ventures(user["id"]),
         bmc_elements=db.get_bmc_map_for_user(user["id"]),
         quota_used=db.count_llm_calls_this_month(user["id"]),
         quota_limit=quota.monthly_limit(),
+        note=request.query_params.get("note") or None,
     )
 
 
@@ -208,7 +471,35 @@ def phase1_new(request: Request):
     user, redirect = login_or_redirect(request)
     if redirect:
         return redirect
-    return render(request, "phase1_new.html", error=None, raw_text="")
+    return _phase1(request)
+
+
+def _upload_limit_label() -> str:
+    """Human-readable size for the upload form — nobody reads '8388608'."""
+    mib = config.max_upload_bytes() / (1024 * 1024)
+    return f"{mib:.0f} MB" if mib >= 1 else f"{config.max_upload_bytes() // 1024} KB"
+
+
+def _phase1(request, **overrides):
+    """Render `/phase1/new` with everything that page needs.
+
+    Four separate ways into this page (paste, upload, import, and the error paths
+    of each) all render the same template, and a context variable forgotten in one
+    of them is a Jinja undefined that only shows up for that one failure mode. So
+    the baseline is built here once and callers override just what differs.
+    """
+    context = {
+        "error": None,
+        "raw_text": "",
+        "from_upload": None,
+        "from_import": None,
+        "max_upload_bytes": _upload_limit_label(),
+        "max_pdf_pages": config.max_pdf_pages(),
+        "import_enabled": config.source_import_enabled(),
+        "import_sources": sources.supported(),
+    }
+    context.update(overrides)
+    return render(request, "phase1_new.html", **context)
 
 
 @app.get("/phase1/ideas", response_class=HTMLResponse)
@@ -217,7 +508,66 @@ def phase1_ideas(request: Request):
     if redirect:
         return redirect
     candidates = [i for i in db.list_ideas(user["id"]) if i["status"] == "candidate"]
-    return render(request, "phase1_ideas.html", ideas=candidates[:config.idea_card_limit()])
+    shown = candidates[:config.idea_card_limit()]
+    # Near-duplicates are computed over the cards this page actually shows, not
+    # over every candidate. Otherwise a card could link to a near-duplicate that
+    # IDEA_CARD_LIMIT pushed below the fold, and the link would go nowhere.
+    return render(
+        request, "phase1_ideas.html",
+        ideas=shown,
+        duplicates=dedupe.find_near_duplicates(shown),
+        ideas_by_id={i["id"]: i for i in shown},
+            idea_challenges={
+            idea["id"]: _challenge_cards(user["id"], idea_id=idea["id"])
+            for idea in shown
+        },
+        dismissed=[i for i in db.list_ideas(user["id"], "rejected")],
+        note=request.query_params.get("note") or None,
+    )
+
+
+@app.post("/phase1/dismiss/{idea_id}")
+def phase1_dismiss(request: Request, idea_id: int):
+    """Retire an idea card the researcher does not want to see again.
+
+    The card is marked `rejected`, not deleted. Nothing in this app throws work
+    away, and an idea the model extracted from someone's unpublished research is
+    the one thing they cannot get back by pasting the text in again.
+
+    Only a `candidate` can be dismissed: a card already selected into a venture
+    is what that venture was built from, and rejecting it would leave the venture
+    pointing at an idea the account calls rejected. `kill_venture` returns a
+    venture's idea to `candidate`, and it can be dismissed from there.
+    """
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    idea = db.get_idea(idea_id, user["id"])
+    # The venture lookup is the tenant check: an id the caller does not own is
+    # simply not found, so a guessed id cannot dismiss somebody else's card.
+    if not idea or idea["status"] != "candidate":
+        return RedirectResponse(url="/phase1/ideas", status_code=303)
+    db.set_idea_status(idea_id, "rejected")
+    return RedirectResponse(
+        url=f"/phase1/ideas?note={quote('Card dismissed. It is still on this page under Dismissed ideas, if you change your mind.')}",
+        status_code=303,
+    )
+
+
+@app.post("/phase1/restore/{idea_id}")
+def phase1_restore(request: Request, idea_id: int):
+    """Undo a dismissal. Same tenancy check, same status guard."""
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    idea = db.get_idea(idea_id, user["id"])
+    if not idea or idea["status"] != "rejected":
+        return RedirectResponse(url="/phase1/ideas", status_code=303)
+    db.set_idea_status(idea_id, "candidate")
+    return RedirectResponse(
+        url=f"/phase1/ideas?note={quote('Card restored to your candidates.')}",
+        status_code=303,
+    )
 
 
 @app.post("/phase1/extract")
@@ -226,15 +576,18 @@ def phase1_extract(request: Request, raw_text: str = Form(...)):
     if redirect:
         return redirect
     if len(raw_text.strip()) < 40:
-        return render(
-            request, "phase1_new.html", raw_text=raw_text,
-            error="Paste a bit more material — a sentence or two isn't enough signal to extract ideas from.",
-        )
+        return _phase1(
+            request, raw_text=raw_text,
+            error="Paste a bit more material — a sentence or two isn't enough signal "
+                  "to extract ideas from.")
+    throttled = throttle_llm(request, user["id"], "/phase1/new")
+    if throttled is not None:
+        return throttled
     try:
         quota.check(user["id"])
         idea_cards = llm.extract_ideas(raw_text, user_id=user["id"])
     except llm.LLMError as e:
-        return render(request, "phase1_new.html", raw_text=raw_text, error=str(e))
+        return _phase1(request, raw_text=raw_text, error=str(e))
 
     for card in idea_cards:
         db.create_idea(
@@ -249,6 +602,103 @@ def phase1_extract(request: Request, raw_text: str = Form(...)):
     return RedirectResponse(url="/phase1/ideas", status_code=303)
 
 
+@app.post("/phase1/upload")
+async def phase1_upload(request: Request, file: UploadFile = File(...)):
+    """Turn an uploaded PDF/DOCX/TXT into editable material — and discard the file.
+
+    The bytes never reach the disk: they are read into memory, parsed, and dropped.
+    The extracted text comes back in the same preview box pasted text uses, so
+    submitting it is an ordinary `POST /phase1/extract` — no new AI-call path, so
+    no quota change and nothing new for the rate limiter to cover.
+
+    The preview is the point, not a nicety: a thesis chapter arrives with a
+    reference list, an acknowledgements page and possibly a co-author's section,
+    and the user should get to remove those before an AI call spends their quota
+    on them.
+    """
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    if not (file.filename or "").strip():
+        return _phase1(request, error="Pick a file first.")
+
+    limit = config.max_upload_bytes()
+    data = bytearray()
+    try:
+        # Read in chunks and stop the moment it is over the cap, rather than
+        # reading a 2 GB body into memory in order to reject it afterwards.
+        # Starlette's UploadFile is not async-iterable, so this is read(size).
+        while True:
+            chunk = await file.read(64 * 1024)
+            if not chunk:
+                break
+            data.extend(chunk)
+            if len(data) > limit:
+                return _phase1(
+                    request,
+                    error=f"That file is larger than {_upload_limit_label()}. "
+                          "Upload the chapter or section you care about.")
+    finally:
+        await file.close()
+
+    try:
+        text = upload.extract(bytes(data), filename=file.filename or "")
+    except upload.UploadError as e:
+        return _phase1(request, error=str(e))
+
+    if len(text.strip()) < 40:
+        return _phase1(
+            request, raw_text=text,
+            error="Only a little text came out of that — paste more, or paste "
+                  "the section directly.")
+    return _phase1(request, raw_text=text, from_upload=file.filename or "file")
+
+
+@app.post("/phase1/import")
+def phase1_import(request: Request, identifier: str = Form("")):
+    """Turn an ORCID iD, DOI, or arXiv ID into editable material.
+
+    Same shape as the upload route, for the same reasons: the fetched metadata
+    comes back in the preview box and submitting it is an ordinary
+    `POST /phase1/extract`. No AI call, so no quota, and the untrusted-data wrapper
+    in `llm.extract_ideas` covers this material exactly as it covers a paste —
+    fetched text is third-party text and gets no exemption for having travelled
+    through our own server.
+
+    Rate-limited separately from the model routes and under its own prefix, because
+    it has the same shape of risk — a user-triggered outbound request holding a
+    worker thread — at a far smaller cost. Checked *before* the fetch, so a refused
+    import never touches a third party.
+    """
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    identifier = (identifier or "").strip()
+
+    if not config.source_import_enabled():
+        return _phase1(request, error="Identifier import is turned off on this deployment.")
+
+    retry_after = ratelimit.check(
+        user["id"], _client_ip(request),
+        per_user=config.import_rate_limit_per_min(),
+        per_ip=config.import_rate_limit_ip_per_min(),
+        prefix="import:")
+    if retry_after is not None:
+        return _phase1(request, error=f"Too many imports in a row. Try again in "
+                                      f"about {retry_after} seconds.")
+
+    try:
+        record = sources.import_material(identifier)
+    except sources.SourceError as e:
+        return _phase1(request, error=str(e))
+
+    if len(record.body.strip()) < 40:
+        return _phase1(request,
+                       error=f"{record.source} gave back too little to work with. "
+                             "Add a line of your own in the box, or paste the material.")
+    return _phase1(request, raw_text=record.body, from_import=record)
+
+
 @app.post("/phase1/select/{idea_id}")
 def phase1_select(request: Request, idea_id: int):
     user, redirect = login_or_redirect(request)
@@ -260,6 +710,131 @@ def phase1_select(request: Request, idea_id: int):
     db.set_idea_status(idea_id, "selected")
     venture_id = db.create_venture(user["id"], idea_id)
     return RedirectResponse(url=f"/venture/{venture_id}", status_code=303)
+
+
+# ==================== Account & data ====================
+
+# GET, not POST: a download changes nothing, so there is nothing for a cross-site
+# request to cause, and a GET is what a browser can fetch without JavaScript.
+@app.get("/account/export")
+def account_export(request: Request):
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    payload = db.export_user_data(user["id"])
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+    return Response(
+        content=json.dumps(payload, indent=2, default=str),
+        media_type="application/json",
+        headers={
+            # `no-store` because this file is the user's research and must not sit
+            # in a shared machine's cache or history.
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="launchloop-{stamp}.json"',
+        },
+    )
+
+
+@app.post("/account/password")
+async def account_password(request: Request):
+    """Change the password, and end every session that predates it.
+
+    This is the security control the stateless cookie could not previously
+    express: a stolen session cookie stops working the moment the owner rotates
+    the credential, which is the whole reason anyone rotates one.
+
+    Asks for the current password for the same reason `/account/delete` does —
+    the people who most need to rotate are the ones whose session may be
+    compromised, and without this gate an attacker who found the cookie could
+    change the password and lock the owner out for good.
+    """
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    form = await request.form()
+    current = str(form.get("current_password", ""))
+    password = str(form.get("password", ""))
+    confirm = str(form.get("confirm", ""))
+
+    def back(error):
+        return render(request, "account.html", error=error, confirm="",
+                      export_rows=_export_row_count(user["id"]))
+
+    if not auth.verify_password(current, user["password_hash"]):
+        return back("That is not your current password.")
+    if password != confirm:
+        return back("Those two passwords do not match.")
+    if len(password) < config.min_password_length():
+        return back(f"Password must be at least {config.min_password_length()} characters.")
+    if len(password.encode("utf-8")) > auth.MAX_PASSWORD_BYTES:
+        return back(f"Password must be at most {auth.MAX_PASSWORD_BYTES} bytes.")
+    # Reusing the current password is a failed rotation that reads as success, so
+    # it is refused here rather than accepted and then reported as a change.
+    if auth.verify_password(password, user["password_hash"]):
+        return back("That is already your password. Pick a different one.")
+
+    epoch = db.set_password(user["id"], auth.hash_password(password))
+    # Re-issue THIS session with the new epoch. set_password() has already
+    # invalidated every other one, and revoking the caller's own session would
+    # sign them out of the tab they just used to secure the account.
+    refreshed = dict(user, session_epoch=epoch)
+    auth.start_session(request, refreshed)
+    return RedirectResponse(
+        url=f"/account?note={quote('Password changed. Every other session has been signed out.')}",
+        status_code=303,
+    )
+
+@app.post("/account/delete")
+async def account_delete(request: Request):
+    """Irreversible. Two gates: the password, and typing DELETE.
+
+    A checkbox would be one stray click; a password means an unlocked laptop left
+    on a desk is not enough to destroy someone's research.
+    """
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    form = await request.form()
+    password = str(form.get("password", ""))
+    confirm = str(form.get("confirm", "")).strip()
+
+    def back(error):
+        return render(request, "account.html", error=error, confirm="",
+                      export_rows=_export_row_count(user["id"]))
+
+    if confirm != "DELETE":
+        return back("Type DELETE exactly, in capitals, to confirm.")
+    # Checked before the deletion, obviously, and the order matters: a wrong
+    # password must never look like a confirmation problem and vice versa.
+    if not auth.verify_password(password, user["password_hash"]):
+        return back("That password is not right.")
+
+    removed = db.delete_user_account(user["id"])
+    request.session.clear()
+    print(f"[account] deleted user {user['id']} ({user['email']}): {removed}")
+    # The counts go to the log, not the page: "1 rows of research removed" is a
+    # worse confirmation than saying what actually happened.
+    return RedirectResponse(
+        url="/login?note=" + quote(
+            "Account deleted. Everything in it has been removed."),
+        status_code=303)
+
+
+def _export_row_count(user_id: int) -> dict:
+    """Row counts for the account page, so the export/download buttons state what
+    they are about to move rather than making the user trust a word."""
+    data = db.export_user_data(user_id)
+    return {k: len(v) for k, v in data.items() if isinstance(v, list)}
+
+
+@app.get("/account", response_class=HTMLResponse)
+def account_view(request: Request):
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    return render(request, "account.html", error=None, confirm="",
+                  note=request.query_params.get("note") or None,
+                  export_rows=_export_row_count(user["id"]))
 
 
 # ==================== Phase 2 state machine ====================
@@ -394,6 +969,11 @@ def apply_verdict(venture, run, analysis) -> int | None:
                                    or "The model recommended a pivot on this block.")
 
     if verdict == "pass":
+        # On a pass, revised_hypothesis is the block's confirmed answer — the value
+        # proposition, the customer segment, whatever the block is about. It lands in
+        # `hypothesis` and the canvas cell renders it as the block's answer, which is
+        # why the prompt asks for the answer itself rather than a finding summary.
+        # outcome_note keeps the evidence that settled it, shown beneath.
         db.set_segment_outcome(venture_id, segment_key, "passed",
                                note=analysis.get("evidence_note"),
                                hypothesis=analysis.get("revised_hypothesis"))
@@ -494,7 +1074,18 @@ def _venture_context(request, venture, user, focus_key=None, **extra):
         "cap_extension": config.segment_cap(),
         "quota_used": db.count_llm_calls_this_month(user["id"]),
         "quota_limit": quota.monthly_limit(),
+        # subject_kind is not optional here: a block challenge and a plan
+        # challenge share a venture_id, so filtering by venture alone put the
+        # launch plan's questions on top of every block panel.
+        "segment_challenges": (
+            _challenge_cards(user["id"], venture_id=venture_id,
+                             subject_kind="segment")
+            if focus_segment else []
+        ),
         "error": request.query_params.get("err") or None,
+        # A success message needs its own key: reusing `err` would render "email
+        # confirmed" in the same red box as a quota failure.
+        "note": request.query_params.get("note") or None,
     }
     ctx.update(extra)
     return ctx
@@ -515,18 +1106,31 @@ def venture_view(request: Request, venture_id: int):
 
     if ctx["kind"] == "phase3":
         strategy = db.get_launch_strategy(venture_id)
-        return render(
-            request, "venture_phase3.html",
-            venture=venture, segments=ctx["segments"],
-            resolved=ctx["resolved"], total_segments=ctx["total_segments"],
+        # Every context key comes off ctx rather than being re-listed here. This
+        # branch used to hand-build its own dict, which is how `error` and
+        # `note` went missing: back_to_venture() attaches a message as ?err=,
+        # the template had no {{ error }} block either, so a provider outage or
+        # an exhausted quota while generating the strategy redirected back to a
+        # page that looked unchanged and said nothing at all — the swallowed
+        # refusal back_to_venture's docstring says it exists to prevent.
+        ctx.update(
             gaps=db.open_gaps(venture_id),
             strategy={
                 "funding_matches": strategy["funding_matches_json"],
                 "gtm_channels": strategy["gtm_channels_json"],
                 "action_plan": strategy["action_plan_json"],
             } if strategy else None,
-            quota_used=ctx["quota_used"], quota_limit=ctx["quota_limit"],
         )
+        if strategy:
+            plan = ctx["strategy"]["action_plan"] or []
+            ctx["steps"] = db.get_action_steps(venture_id)
+            ctx["plan_items"] = db.join_action_plan(ctx["steps"], plan)
+            ctx["progress"] = db.action_plan_progress(ctx["steps"], plan)
+        else:
+            ctx["steps"], ctx["plan_items"], ctx["progress"] = {}, [], None
+            ctx["plan_challenges"] = _challenge_cards(
+                user["id"], venture_id=venture_id, subject_kind="plan")
+        return render(request, "venture_phase3.html", **ctx)
     return render(request, "venture_phase2.html", **ctx)
 
 
@@ -579,6 +1183,10 @@ def start_run(request: Request, venture_id: int, segment_key: str):
               if r["element_name"] != segment_key]
     previous = db.list_segment_runs(venture_id, segment_key)
 
+    throttled = throttle_llm(request, user["id"],
+                             f"/venture/{venture_id}/segment/{segment_key}")
+    if throttled is not None:
+        return throttled
     try:
         quota.check(user["id"])
         designed = llm.generate_segment_tasks(
@@ -645,6 +1253,19 @@ def _score_run(request, venture, run, user, results=None):
         logged = {"todos_json": run["todos_json"], "results_json": logged}
     if not logged or not logged["results_json"]:
         return None, back_to_venture(venture["id"], "Log the results before scoring.")
+
+    # Throttle *after* the results are known to be on disk. This route is reached
+    # from log_run (which persists them first, invariant 5) and from retry-analysis
+    # (where they were persisted earlier), so refusing here never costs the user
+    # their evidence — the retry path stays available.
+    throttled = throttle_llm(
+        request, user["id"], f"/venture/{venture['id']}/segment/{segment_key}",
+        saved="Your logged results are saved — the verdict is the only thing "
+              "that has not run yet, and retrying it will not cost you anything "
+              "but time.",
+    )
+    if throttled is not None:
+        return None, throttled
 
     try:
         quota.check(user["id"])
@@ -823,6 +1444,9 @@ def generate_strategy(request: Request, venture_id: int):
         return RedirectResponse(url=f"/venture/{venture_id}", status_code=303)
 
     segments = [dict(row) for row in db.get_segments(venture_id)]
+    throttled = throttle_llm(request, user["id"], f"/venture/{venture_id}")
+    if throttled is not None:
+        return throttled
     try:
         quota.check(user["id"])
         strategy = llm.generate_launch_strategy(
@@ -839,3 +1463,338 @@ def generate_strategy(request: Request, venture_id: int):
         strategy["action_plan"],
     )
     return RedirectResponse(url=f"/venture/{venture_id}", status_code=303)
+
+# How much a single action-plan outcome note may be. The run-outcome fields cap
+# at 4000; a plan step is one sentence of "what happened", so this is tighter.
+MAX_STEP_NOTE_CHARS = 2000
+
+# Confirmation per status, on the success path only. Kept apart from the refusal
+# copy above because a success message reusing the red error box reads as a
+# failure (invariant 10: `error` and `note` are different channels on purpose).
+STEP_SAVED_NOTES = {
+    "done": "Step marked done. The outcome you recorded is saved.",
+    "blocked": "Step marked blocked. The reason you recorded is saved.",
+    "pending": "Step reopened.",
+}
+
+@app.post("/venture/{venture_id}/phase3/step")
+async def phase3_step(request: Request, venture_id: int):
+    """Record how far one launch-plan step got.
+
+    The form posts the step's INDEX and the step_key it was *rendered* with, and
+    the server re-derives the key from the stored plan and requires the two to
+    agree. Both halves are load-bearing:
+
+    * Deriving the key server-side is what stops a crafted POST writing to an
+      arbitrary row. A form that simply posted a step_key would let anyone with
+      a session write to any row in the table by supplying a hash, and name a
+      step the researcher was never shown.
+    * Comparing against the *rendered* key is what makes a stale form safe. The
+      user confirmed a specific instruction at render time; if the strategy was
+      regenerated since, index 0 names a different instruction, and writing
+      there would record a completion against work nobody did. Without this
+      check the identity the user agreed to and the identity written would be
+      resolved at two different moments, and could differ.
+    """
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    venture = db.get_venture(venture_id, user["id"])
+    if not venture:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    if venture["status"] != "validated" and venture["phase"] != 3:
+        return RedirectResponse(url=f"/venture/{venture_id}", status_code=303)
+
+    strategy = db.get_launch_strategy(venture_id)
+    if not strategy:
+        return RedirectResponse(url=f"/venture/{venture_id}", status_code=303)
+    plan = [i for i in (strategy["action_plan_json"] or [])
+            if isinstance(i, dict) and isinstance(i.get("step"), str)
+            and i["step"].strip()]
+
+    form = await request.form()
+    try:
+        index = int(str(form.get("index", "")).strip())
+    except (TypeError, ValueError):
+        index = -1
+    # Bounds-checked against the *stored* plan, not the posted length: a negative
+    # index would otherwise wrap around to the last step.
+    if not 0 <= index < len(plan):
+        return RedirectResponse(url=f"/venture/{venture_id}", status_code=303)
+    key = db.step_key(plan[index]["step"])
+    if str(form.get("step_key", "")).strip() != key:
+        # A strategy was regenerated between rendering this form and submitting
+        # it, so the step the user confirmed is no longer the step at this
+        # position. Refusing beats guessing which one they meant.
+        return back_to_venture(
+            venture_id,
+            "That step is no longer the one this page showed — the strategy was "
+            "regenerated. Reload to see the current plan and record it there.",
+        )
+
+    status = str(form.get("status", "")).strip()
+    if status not in ACTION_STEP_STATUSES:
+        return back_to_venture(venture_id, "That is not a state a plan step can be in.")
+    note = str(form.get("note", "")).strip()[:MAX_STEP_NOTE_CHARS]
+
+    # `done` and `blocked` are assertions about the real world, so both need a
+    # reason. Same rule, and for the same reason, as parking a block: a step
+    # marked done with nothing recorded is the unevidenced claim this app exists
+    # to replace. Reverting to pending asserts nothing, so it needs no note.
+    if status in ("done", "blocked") and not note:
+        word = "done" if status == "done" else "blocked"
+        return back_to_venture(
+            venture_id,
+            f"Say what happened before marking this step {word} — a step with "
+            f"no outcome is just a claim, and the claim is the thing this app "
+            f"is meant to replace.",
+        )
+
+    if not db.set_action_step(venture_id, key, status, note=note or None):
+        # The row is gone: the plan was regenerated into a different list
+        # between rendering this form and submitting it.
+        return back_to_venture(
+            venture_id,
+            "That step is no longer part of the current plan — the strategy was "
+            "regenerated. Reload to see the new one.",
+        )
+    return RedirectResponse(
+        url=f"/venture/{venture_id}?note={quote(STEP_SAVED_NOTES[status])}",
+        status_code=303,
+    )
+
+# ==================== Mentor challenges (M2.1) ====================
+
+def _challenge_cards(user_id: int, **kwargs) -> list:
+    """This subject's past challenges, each carrying its playbook for rendering.
+
+    The label and attribution are joined in here rather than stored on the row,
+    because they are properties of the playbook, not of the challenge — and
+    copying them into the table would mean a catalogue edit left old rows quoting
+    a label that no longer exists.
+    """
+    cards = []
+    for row in db.list_mentor_challenges(user_id, **kwargs):
+        mentor = mentors.get(row["mentor_key"]) or {}
+        cards.append({
+            **row,
+            "mentor": mentor,
+            "mentor_label": mentor.get("label", row["mentor_key"]),
+        })
+    return cards
+
+def _challenge_state_for_idea(idea: dict) -> list:
+    """What is actually on record for one idea card, as lines.
+
+    Deliberately thin: an idea card has a title, a framing and a strength signal,
+    and inventing more would mean inventing facts. The `raw_claims` field is the
+    model's own text about the researcher's work, so it is included but capped.
+    """
+    lines = [
+        f"The idea: {idea['title']}",
+        f"Its commercial framing: {idea.get('commercial_framing') or '(none)'}",
+        f"Strength signal the model gave it: {idea.get('strength_signal') or '(none)'}",
+    ]
+    if idea.get("raw_claims"):
+        lines.append(f"Built from this technical claim: {idea['raw_claims'][:600]}")
+    lines.append(f"Idea status in the account: {idea['status']}")
+    return lines
+
+
+def _challenge_state_for_segment(venture: dict, segment: dict, runs: list) -> list:
+    """The block's own evidence, plus where the rest of the canvas stands."""
+    lines = [
+        f"Block: {segment.get('label') or segment.get('element_name')}",
+        f"Current outcome: {segment.get('outcome')}",
+        f"Evidence read: {segment.get('status')}",
+        f"Hypothesis on record: {segment.get('hypothesis') or '(none written yet)'}",
+    ]
+    if segment.get("outcome_note"):
+        lines.append(f"What the researcher recorded: {segment['outcome_note'][:600]}")
+    if segment.get("notes"):
+        lines.append(f"Notes: {segment['notes'][:600]}")
+
+    if runs:
+        lines.append(f"Runs logged on this block: {len(runs)}")
+        for run in runs[-3:]:
+            results = run.get("results_json") or []
+            if isinstance(results, list):
+                for result in results[:4]:
+                    if not isinstance(result, dict):
+                        continue
+                    title = result.get("title") or "(untitled task)"
+                    outcome = (result.get("outcome") or "").strip()[:300]
+                    size = result.get("sample_size") or "no sample size stated"
+                    lines.append(f"  - {title}: logged \"{outcome}\" ({size})")
+            analysis = run.get("analysis_json")
+            if isinstance(analysis, dict) and analysis.get("verdict"):
+                lines.append(f"  - verdict given: {analysis['verdict']}")
+    else:
+        lines.append("No runs logged on this block yet.")
+
+    others = [
+        f"{other.get('label') or other.get('element_name')}: {other.get('outcome')}"
+        for other in db.get_segments(venture["id"])
+        if other.get("element_name") != segment.get("element_name")
+    ]
+    if others:
+        lines.append("Rest of the canvas: " + "; ".join(others))
+    return lines
+
+
+def _challenge_state_for_plan(venture: dict, segments: list, steps: dict,
+                              plan: list) -> list:
+    """The canvas, the gaps, and what has actually been ticked off."""
+    lines = [
+        f"Idea: {venture['idea_title']}",
+        f"Commercial framing: {venture.get('commercial_framing') or '(none)'}",
+    ]
+    for segment in segments:
+        note = (segment.get("outcome_note") or "").strip()
+        line = (f"{segment.get('label') or segment.get('element_name')}: "
+                f"{segment.get('outcome')} (evidence: {segment.get('status')})")
+        if segment.get("outcome") == "parked" and note:
+            line += f" — PARKED, workaround: {note[:300]}"
+        elif note:
+            line += f" — recorded: {note[:300]}"
+        lines.append(line)
+
+    progress = db.action_plan_progress(steps, plan or [])
+    if progress["total"]:
+        lines.append(f"Action plan: {progress['done']} of {progress['total']} steps done"
+                     + (f", {progress['blocked']} blocked" if progress["blocked"] else ""))
+        for item in db.join_action_plan(steps, plan or []):
+            state = item["status"]
+            lines.append(f"  - [{state}] {item['step'][:200]}"
+                         + (f" — researcher recorded: {item['note'][:200]}"
+                            if item["note"] else ""))
+    else:
+        lines.append("No action plan generated yet.")
+    return lines
+
+
+def _challenge_other_segments(venture: dict) -> list:
+    """Every block on the canvas, as plain dicts.
+
+    A helper rather than inlined into each state builder so none of them has to
+    know how another one fetches the canvas.
+    """
+    return [dict(s) for s in db.get_segments(venture["id"])]
+
+
+async def _challenge(request: Request, user: dict, *, mentor_key: str,
+                     subject_kind: str, subject: str, state: list,
+                     idea_id: int = None, venture_id: int = None,
+                     segment: str = None, back_url: str = None) -> Response:
+    """Shared body of the three challenge routes.
+
+    The mentor is refused before the call if the playbook is unknown, is throttled,
+    then charged to the monthly quota, then called, then persisted — and
+    redirected. Nothing in here can change a block's outcome, a run's verdict or a
+    venture's status; that is the whole point of the feature (invariant 4) and
+    TestMentorChallenge asserts it rather than trusting this docstring.
+
+    `state` is already-composed lines of what the researcher has recorded. This
+    function decides how they are presented; the caller decides which facts are
+    relevant.
+    """
+    back_url = back_url or (f"/venture/{venture_id}" if venture_id else "/phase1/ideas")
+    if mentor_key not in MENTOR_KEYS or subject_kind not in MENTOR_SUBJECT_KINDS:
+        # Refused before the limiter is touched or a prompt exists. An unknown key
+        # would otherwise put a real founder's name next to generated text with no
+        # principle behind it — the failure app/mentors.py exists to prevent.
+        return RedirectResponse(url=f"{back_url}?err={quote(mentors.MENTOR_BAD_KEY)}",
+                                status_code=303)
+
+    throttled = throttle_llm(request, user["id"], back_url)
+    if throttled is not None:
+        return throttled
+    try:
+        quota.check(user["id"])
+        result = llm.challenge_with_mentor(
+            mentor_key, subject, state, user_id=user["id"])
+    except llm.LLMError as e:
+        # Nothing is written. back_to_venture so a Phase 2/3 subject lands back on
+        # the page they were reading; back_to_venture also works for Phase 1
+        # because the ideas page renders `error` from ?err= like the others.
+        return RedirectResponse(
+            url=f"{back_url}?err={quote(str(e)[:300])}", status_code=303)
+
+    db.save_mentor_challenge(
+        user["id"], mentor_key, subject_kind, result["questions"],
+        idea_id=idea_id, venture_id=venture_id, segment=segment,
+        dropped=result.get("dropped", 0),
+    )
+    return RedirectResponse(
+        url=f"{back_url}?note={quote(mentors.CHALLENGE_READY)}", status_code=303)
+
+
+@app.post("/mentor/idea/{idea_id}")
+async def mentor_idea(request: Request, idea_id: int):
+    """Challenge one candidate idea card, before it becomes a venture."""
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    # The lookup IS the tenant check: an idea belonging to somebody else is simply
+    # not found, so a guessed id cannot spend this user's quota.
+    idea = db.get_idea(idea_id, user["id"])
+    if not idea:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    form = await request.form()
+    return await _challenge(
+        request, user,
+        mentor_key=str(form.get("mentor_key", "")).strip(),
+        subject_kind="idea", subject=f'the idea card "{idea["title"]}"',
+        state=_challenge_state_for_idea(dict(idea)),
+        idea_id=idea_id, back_url=f"/phase1/ideas#idea-{idea_id}",
+    )
+
+
+@app.post("/venture/{venture_id}/mentor/segment/{segment_key}")
+async def mentor_segment(request: Request, venture_id: int, segment_key: str):
+    """Challenge one canvas block against the evidence actually logged on it."""
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    venture = db.get_venture(venture_id, user["id"])
+    segment = db.get_segment(venture_id, segment_key) if venture else None
+    if not venture or not segment:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    form = await request.form()
+    return await _challenge(
+        request, user,
+        mentor_key=str(form.get("mentor_key", "")).strip(),
+        subject_kind="segment",
+        subject=f'the "{segment.get("label") or segment_key}" block of this canvas',
+        state=_challenge_state_for_segment(
+            dict(venture), dict(segment),
+            db.list_segment_runs(venture_id, segment_key)),
+        venture_id=venture_id, segment=segment_key,
+        back_url=f"/venture/{venture_id}/segment/{segment_key}",
+    )
+
+
+@app.post("/venture/{venture_id}/mentor/plan")
+async def mentor_plan(request: Request, venture_id: int):
+    """Challenge the launch plan against the resolved canvas and the recorded steps."""
+    user, redirect = login_or_redirect(request)
+    if redirect:
+        return redirect
+    venture = db.get_venture(venture_id, user["id"])
+    if not venture:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    segments = [dict(s) for s in db.get_segments(venture_id)]
+    strategy = db.get_launch_strategy(venture_id)
+    plan = (strategy["action_plan_json"] if strategy else []) or []
+    steps = db.get_action_steps(venture_id) if strategy else {}
+
+    form = await request.form()
+    return await _challenge(
+        request, user,
+        mentor_key=str(form.get("mentor_key", "")).strip(),
+        subject_kind="plan",
+        subject="this launch plan and the canvas it was built from",
+        state=_challenge_state_for_plan(dict(venture), segments, steps, plan),
+        venture_id=venture_id, back_url=f"/venture/{venture_id}",
+    )

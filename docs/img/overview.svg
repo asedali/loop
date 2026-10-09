@@ -1,0 +1,202 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 782" width="1080" height="782" role="img" aria-labelledby="t d" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif">
+  <title id="t">LaunchLoop: the three phases and who does what</title>
+  <desc id="d">Phase 1 turns pasted research material into idea cards using one AI call. Phase 2 is a validation loop that tests one Business Model Canvas block at a time, alternating AI-designed tasks with work the user does in the real world, ending in a verdict; a failed critical block offers the user a kill or pivot choice. Phase 3 turns a resolved canvas into an advisory go-to-market package. A closing strip shows that the user decides, the app owns state and caps, and the AI only proposes.</desc>
+  <style>
+    .bg{fill:#ffffff}
+    .pnl{fill:#f5f8fc;stroke:#dde3ee;stroke-width:1}
+    .pnl2{fill:#ffffff;stroke:#dde3ee;stroke-width:1}
+    .hair{stroke:#e2e8f2;stroke-width:1}
+    .ink{fill:#101827}
+    .ink2{fill:#3b475a}
+    .ink3{fill:#67748a}
+    .on-white{fill:#ffffff}
+    .t1{fill:#0284c7}.s1{stroke:#0284c7}
+    .t2{fill:#7c3aed}.s2{stroke:#7c3aed}
+    .t3{fill:#047857}.s3{stroke:#047857}
+    .tk{fill:#94a3b8}
+    .dk{fill:#e11d48}
+    .mk1{fill:#0284c7}.mk2{fill:#7c3aed}.mk3{fill:#047857}
+    .mki{fill:#3b475a}.mkm{fill:#94a3b8}.mkd{fill:#e11d48}
+    .f1{fill:#0284c7;fill-opacity:.09}.f2{fill:#7c3aed;fill-opacity:.09}.f3{fill:#047857;fill-opacity:.09}
+    .fd{fill:#e11d48;fill-opacity:.08}.fdk{fill:#0f172a}
+    .fw{fill:#a16207;fill-opacity:.10}.fwt{fill:#7c4a06}
+    .mk{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .caps{letter-spacing:.09em;font-size:10.5px;font-weight:700}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#080a0f}
+      .pnl{fill:#10141c;stroke:#232b3a}
+      .pnl2{fill:#161b25;stroke:#232b3a}
+      .hair{stroke:#1b2230}
+      .ink{fill:#eef2f9}.ink2{fill:#c2cbd9}.ink3{fill:#8593a8}
+      .on-white{fill:#0a0d13}
+      .t1{fill:#38bdf8}.s1{stroke:#38bdf8}
+      .t2{fill:#a78bfa}.s2{stroke:#a78bfa}
+      .t3{fill:#34d399}.s3{stroke:#34d399}
+      .tk{fill:#64748b}
+      .dk{fill:#fb7185}
+      .mk1{fill:#38bdf8}.mk2{fill:#a78bfa}.mk3{fill:#34d399}
+      .mki{fill:#8593a8}.mkm{fill:#64748b}.mkd{fill:#fb7185}
+      .f1{fill:#38bdf8;fill-opacity:.13}.f2{fill:#a78bfa;fill-opacity:.13}.f3{fill:#34d399;fill-opacity:.13}
+      .fd{fill:#fb7185;fill-opacity:.12}.fdk{fill:#eef2f9}
+      .fw{fill:#fbbf24;fill-opacity:.12}.fwt{fill:#fbbf24}
+    }
+  </style>
+  <defs>
+    <marker id="a-mki" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mki" d="M0 .6 L7.4 4 L0 7.4 z"/></marker>
+    <marker id="a-mkm" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkm" d="M0 .6 L7.4 4 L0 7.4 z"/></marker>
+    <marker id="a-mk2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk2" d="M0 .6 L7.4 4 L0 7.4 z"/></marker>
+    <marker id="a-mk3" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk3" d="M0 .6 L7.4 4 L0 7.4 z"/></marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1080" height="782"/>
+
+  <!-- ===== title ===== -->
+  <text class="ink" x="40" y="42" font-size="23" font-weight="700">Extract an idea, prove it, then take it to market</text>
+  <g>
+    <rect class="f2" x="40" y="56" width="404" height="26" rx="13"/>
+    <text class="t2" x="56" y="74" font-size="12.5" font-weight="700">The AI proposes. You dispose. Every time.</text>
+  </g>
+
+  <!-- ===== PHASE 1 ===== -->
+  <rect class="pnl" x="40" y="100" width="1000" height="122" rx="16"/>
+  <rect class="f1" x="40" y="100" width="5" height="122" rx="2.5"/>
+  <text class="t1 caps" x="60" y="126">PHASE 1 · IDEA DISCOVERY</text>
+  <text class="ink3" x="1020" y="126" text-anchor="end" font-size="11.5">paste-text only · no URL or file import</text>
+
+  <g>
+    <rect class="pnl2" x="60" y="140" width="293" height="62" rx="11"/>
+    <text class="ink" x="76" y="165" font-size="14" font-weight="600">Paste research material</text>
+    <text class="ink3" x="76" y="184" font-size="12">a thesis, a CV, a body of work</text>
+  </g>
+  <path class="s1" d="M357 171 H389" fill="none" stroke-width="1.6" marker-end="url(#a-mki)"/>
+  <g>
+    <rect class="pnl2" x="393" y="140" width="293" height="62" rx="11"/>
+    <text class="t1" x="409" y="162" font-size="10.5" font-weight="700" letter-spacing=".07em">AI · 1 CALL</text>
+    <text class="ink" x="409" y="180" font-size="14" font-weight="600">Extract &amp; cluster claims</text>
+    <text class="ink3" x="409" y="196" font-size="12">read as untrusted data, never as orders</text>
+  </g>
+  <path class="s1" d="M690 171 H722" fill="none" stroke-width="1.6" marker-end="url(#a-mki)"/>
+  <g>
+    <rect class="pnl2" x="726" y="140" width="294" height="62" rx="11"/>
+    <text class="ink" x="742" y="165" font-size="14" font-weight="600">3–6 idea cards · you pick one</text>
+    <text class="ink3" x="742" y="184" font-size="12">each with a commercial framing + strength signal</text>
+  </g>
+
+  <!-- connector 1 -> 2 -->
+  <path class="s2" d="M540 222 V246" fill="none" stroke-width="1.8" marker-end="url(#a-mk2)"/>
+  <text class="t2" x="552" y="239" font-size="11.5" font-weight="600">select an idea → a venture is born with a fresh nine-block canvas</text>
+
+  <!-- ===== PHASE 2 ===== -->
+  <rect class="pnl" x="40" y="250" width="1000" height="262" rx="16"/>
+  <rect class="f2" x="40" y="250" width="5" height="262" rx="2.5"/>
+  <text class="t2 caps" x="60" y="276">PHASE 2 · VALIDATION LOOP</text>
+  <text class="ink3" x="1020" y="276" text-anchor="end" font-size="11.5">the substance of the app</text>
+
+  <rect class="pnl2" x="60" y="290" width="960" height="152" rx="12"/>
+  <g>
+    <rect class="pnl2" x="84" y="314" width="198" height="66" rx="10" stroke-dasharray="3 3"/>
+    <text class="ink" x="98" y="338" font-size="13.5" font-weight="600">A hypothesis</text>
+    <text class="ink3" x="98" y="356" font-size="11.5">one falsifiable claim</text>
+  </g>
+  <path d="M286 347 H318" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a-mki)"/>
+  <g>
+    <rect class="f2" x="322" y="314" width="198" height="66" rx="10"/>
+    <text class="t2" x="336" y="332" font-size="10" font-weight="700" letter-spacing=".06em">AI · 1 CALL</text>
+    <text class="ink" x="336" y="350" font-size="13.5" font-weight="600">2–4 tasks</text>
+    <text class="ink3" x="336" y="367" font-size="11.5">method, steps, sample, effort</text>
+  </g>
+  <path d="M524 347 H556" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a-mki)"/>
+  <g>
+    <rect class="fw" x="560" y="314" width="198" height="66" rx="10"/>
+    <text class="fwt" x="574" y="332" font-size="10" font-weight="700" letter-spacing=".06em">YOU · OFFLINE</text>
+    <text class="ink" x="574" y="350" font-size="13.5" font-weight="600">Do the work</text>
+    <text class="ink3" x="574" y="367" font-size="11.5">interviews, quotes, a waitlist</text>
+  </g>
+  <path d="M762 347 H794" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a-mki)"/>
+  <g>
+    <rect class="pnl2" x="798" y="314" width="198" height="66" rx="10"/>
+    <text class="ink" x="812" y="338" font-size="13.5" font-weight="600">Log what happened</text>
+    <text class="ink3" x="812" y="356" font-size="11.5">saved before the AI is asked</text>
+  </g>
+  <g>
+    <rect class="f2" x="798" y="386" width="198" height="42" rx="10"/>
+    <text class="t2" x="812" y="403" font-size="10" font-weight="700" letter-spacing=".06em">AI · 1 CALL</text>
+    <text class="ink" x="812" y="420" font-size="13.5" font-weight="600">Verdict for this block</text>
+  </g>
+  <path d="M897 380 V392" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#a-mki)"/>
+
+  <!-- loop back -->
+  <path class="s2" d="M797 407 H640 Q624 407 624 391 V396" fill="none" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#a-mk2)"/>
+  <text class="t2" x="648" y="422" font-size="11.5" font-weight="600">iterate — up to 3 runs per block</text>
+
+  <g>
+    <rect class="pnl2" x="84" y="390" width="270" height="36" rx="9"/>
+    <text class="ink2" x="98" y="412" font-size="12">9 canvas blocks · one at a time</text>
+  </g>
+
+  <!-- exits -->
+  <g>
+    <rect class="fd" x="366" y="390" width="236" height="36" rx="9"/>
+    <text class="dk" x="380" y="412" font-size="12" font-weight="600">critical block fails → YOU choose</text>
+  </g>
+
+  <!-- footer pills -->
+  <g>
+    <rect class="pnl2" x="60" y="462" width="286" height="34" rx="10"/>
+    <text class="dk" x="74" y="483" font-size="12" font-weight="600">kill</text>
+    <text class="ink3" x="104" y="483" font-size="12">the idea returns to your candidates</text>
+  </g>
+  <g>
+    <rect class="pnl2" x="356" y="462" width="392" height="34" rx="10"/>
+    <text class="t2" x="370" y="483" font-size="12" font-weight="600">pivot</text>
+    <text class="ink3" x="404" y="483" font-size="12">a new venture — every passed block carries over</text>
+  </g>
+  <g>
+    <rect class="pnl2" x="758" y="462" width="262" height="34" rx="10"/>
+    <text class="ink2" x="772" y="483" font-size="12">≈54 AI calls for a full nine-block pass</text>
+  </g>
+
+  <!-- connector 2 -> 3 -->
+  <path class="s3" d="M540 512 V538" fill="none" stroke-width="1.8" marker-end="url(#a-mk3)"/>
+  <text class="t3" x="552" y="530" font-size="11.5" font-weight="600">all nine blocks resolved — passed or parked, gaps included</text>
+
+  <!-- ===== PHASE 3 ===== -->
+  <rect class="pnl" x="40" y="542" width="1000" height="122" rx="16"/>
+  <rect class="f3" x="40" y="542" width="5" height="122" rx="2.5"/>
+  <text class="t3 caps" x="60" y="568">PHASE 3 · LAUNCH STRATEGY</text>
+  <text class="ink3" x="1020" y="568" text-anchor="end" font-size="11.5">advisory · regenerate any time · every earlier draft kept</text>
+
+  <g>
+    <rect class="pnl2" x="60" y="582" width="300" height="62" rx="11"/>
+    <text class="ink" x="76" y="607" font-size="14" font-weight="600">Funding categories</text>
+    <text class="ink3" x="76" y="626" font-size="12">never an invented deadline or amount</text>
+  </g>
+  <g>
+    <rect class="pnl2" x="390" y="582" width="280" height="62" rx="11"/>
+    <text class="ink" x="406" y="607" font-size="14" font-weight="600">GTM channels</text>
+    <text class="ink3" x="406" y="626" font-size="12">derived from your own evidence</text>
+  </g>
+  <g>
+    <rect class="pnl2" x="700" y="582" width="320" height="62" rx="11"/>
+    <text class="ink" x="716" y="607" font-size="14" font-weight="600">Sequenced action plan</text>
+    <text class="ink3" x="716" y="626" font-size="12">to a grant, a pilot, or a paying customer</text>
+  </g>
+
+  <!-- ===== who does what ===== -->
+  <text class="ink3 caps" x="40" y="700">WHO DOES WHAT</text>
+  <g>
+    <rect class="pnl2" x="40" y="710" width="322" height="56" rx="11"/>
+    <text class="ink" x="56" y="733" font-size="13.5" font-weight="700">You</text>
+    <text class="ink3" x="56" y="752" font-size="12">paste · do the work · log · extend, park, kill, pivot</text>
+  </g>
+  <g>
+    <rect class="pnl2" x="379" y="710" width="322" height="56" rx="11"/>
+    <text class="ink" x="395" y="733" font-size="13.5" font-weight="700">The app</text>
+    <text class="ink3" x="395" y="752" font-size="12">owns state, caps, the record, isolation and quota</text>
+  </g>
+  <g>
+    <rect class="pnl2" x="718" y="710" width="322" height="56" rx="11"/>
+    <text class="ink" x="734" y="733" font-size="13.5" font-weight="700">The AI</text>
+    <text class="ink3" x="734" y="752" font-size="12">proposes only — it never closes a venture</text>
+  </g>
+</svg>

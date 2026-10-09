@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Account & data — LaunchLoop{% endblock %}
+{% block content %}
+
+<div class="row between">
+  <div>
+    <div class="eyebrow">Settings</div>
+    <h1>Account &amp; data</h1>
+  </div>
+  <a class="btn p1" href="/dashboard">Back to ventures</a>
+</div>
+
+{% if note %}<div class="callout ok" style="margin-top:1rem">{{ note }}</div>{% endif %}
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+<p class="subtitle">
+  Signed in as <strong>{{ user.email }}</strong>.
+  Your ideas and ventures are private to you, and two things on this page let you
+  take them with you or remove them.
+</p>
+
+{# ---------------- download ---------------- #}
+<div class="card" style="margin-top:1.5rem">
+  <h2 style="font-size:1.05rem">Download my data</h2>
+  <p class="muted">
+    One JSON file with everything on your account: your ideas, ventures, the
+    nine-block canvas, every validation run and its logged results, your launch
+    strategies, the action-plan steps you ticked off, and a record of your AI
+    calls. No passwords, no reset links.
+  </p>
+  {% if export_rows %}
+    <p class="muted-sm">
+      Right now that is
+      {{ export_rows.ideas }} idea{{ '' if export_rows.ideas == 1 else 's' }},
+      {{ export_rows.ventures }} venture{{ '' if export_rows.ventures == 1 else 's' }},
+      {{ export_rows.blocks }} blocks,
+      {{ export_rows.runs }} run{{ '' if export_rows.runs == 1 else 's' }},
+      {{ export_rows.action_steps }} action-plan step{{ '' if export_rows.action_steps == 1 else 's' }},
+      {{ export_rows.llm_calls }} logged AI call{{ '' if export_rows.llm_calls == 1 else 's' }}.
+    </p>
+  {% endif %}
+  <form method="get" action="/account/export" style="margin-top:1rem">
+    <button type="submit" class="p2">Download JSON</button>
+    <span class="muted-sm">no email, it just downloads</span>
+  </form>
+</div>
+
+{# ---------------- password ---------------- #}
+<div class="card" style="margin-top:1.25rem">
+  <h2 style="font-size:1.05rem">Change my password</h2>
+  <p class="muted">
+    This signs out every other session — any other browser, any other tab, and
+    any cookie copied off this machine. You stay signed in here.
+  </p>
+  <p class="muted">
+    If you think someone else has your password, change it <em>and</em> then use
+    "forgot password" if you also need to check your email address is still
+    yours.
+  </p>
+
+  {# The current password is required because the people who most need to rotate
+     are the ones whose session may be compromised; without it, an attacker who
+     found the cookie could change the password and lock the owner out. #}
+  <form method="post" action="/account/password" style="margin-top:1.1rem">
+    <div class="grid-2">
+      <div class="field" style="margin-bottom:.7rem">
+        <label>Current password <span class="opt">— to confirm it is you</span></label>
+        <input type="password" name="current_password" required autocomplete="current-password">
+      </div>
+      <div class="field" style="margin-bottom:.7rem">
+        <label>New password <span class="opt">— at least 8 characters</span></label>
+        <input type="password" name="password" required minlength="8"
+               autocomplete="new-password">
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:.9rem">
+      <label>New password again <span class="opt">— to catch the typo</span></label>
+      <input type="password" name="confirm" required minlength="8"
+             autocomplete="new-password">
+    </div>
+    <button type="submit" class="p1">Change password and sign out other sessions</button>
+  </form>
+</div>
+
+{# ---------------- delete ---------------- #}
+<div class="card" style="margin-top:1.25rem">
+  <h2 style="font-size:1.05rem">Delete my account</h2>
+  <p class="muted">
+    This removes your account and everything in it: ideas, ventures, canvas
+    blocks, validation runs and your logged results. It cannot be undone.
+  </p>
+  <p class="muted">
+    The only thing kept is anonymous spend and latency metadata for AI calls you
+    made — no prompts, no responses, and nothing that identifies you.
+  </p>
+
+  {# Two gates because this is irreversible: the password, and typing DELETE. A
+     checkbox would be one stray click. #}
+  <form method="post" action="/account/delete" style="margin-top:1.1rem">
+    <div class="field" style="margin-bottom:.7rem">
+      <label>Your password <span class="opt">— to confirm it is you</span></label>
+      <input type="password" name="password" required autocomplete="current-password">
+    </div>
+    <div class="field" style="margin-bottom:.9rem">
+      <label>Type <code>DELETE</code> in capitals <span class="opt">— cannot be undone</span></label>
+      <input type="text" name="confirm" value="{{ confirm }}" required
+             autocomplete="off" autocapitalize="characters" placeholder="DELETE">
+    </div>
+    <button type="submit" class="danger">Delete my account and all its data</button>
+  </form>
+</div>
+
+{% endblock %}

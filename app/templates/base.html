@@ -57,6 +57,24 @@
       {% endif %}
     </div>
   </nav>
+  {# Unverified accounts can use everything — this is a nudge, not a gate.
+     Nothing that mails a third party or publishes a venture exists yet; M4.4
+     (share links) and M5.1 (invites) are what will gate, via db.user_is_verified().
+     `user` is put in context by render(), so this needs no per-page plumbing and
+     cannot drift between pages. The flag guard is because no sending path is
+     configured yet: showing a banner that asks for a link that cannot arrive
+     would nag every account forever. See config.email_verification_enabled. #}
+  {% if email_verification_enabled() and user and user.email_verified_at is none %}
+    <div class="callout warn verify-banner">
+      <div>
+        <strong>Confirm your email address.</strong>
+        We need it to be able to send you a password reset.
+      </div>
+      <form method="post" action="/resend-verification" class="inline">
+        <button type="submit" class="secondary">Resend the link</button>
+      </form>
+    </div>
+  {% endif %}
   <main class="{% block main_class %}{% endblock %}">
     {% block content %}{% endblock %}
   </main>
