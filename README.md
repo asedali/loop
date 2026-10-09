@@ -31,7 +31,7 @@ follow the reader's light/dark theme and need no tooling to regenerate.
 
 Working prototype, deployed-shaped, not production-hardened. The whole three-phase
 flow works, per-block validation is the default, and the suite is green
-(**437 tests**, `pytest -q`).
+(**460 tests**, `pytest -q`).
 
 What that means in practice:
 
@@ -129,7 +129,7 @@ Phase 2 → open a canvas block → run a cycle → log results → repeat until
 
 ```bash
 createdb launchloop_test
-pytest -q            # 437 tests, ~7m
+pytest -q            # 460 tests, ~8m
 ```
 
 They need a Postgres but no network. Each test gets its own schema, built by
@@ -262,9 +262,20 @@ Two knobs worth knowing about, because the defaults bite:
 
 ## 3. Deploy
 
-The app is stateless now that the database is Postgres, so it runs anywhere.
-`render.yaml` and the `Dockerfile` build the same image; migrations run on boot,
-so there is no separate migration step.
+The app is stateless now that the database is Postgres, so it runs anywhere. Two
+platforms are configured; both deploy the same code.
+
+| | Render | Vercel |
+|---|---|---|
+| Build | `Dockerfile` (`render.yaml`) | native Python, from `requirements.txt` |
+| Runtime shape | one long-lived container | function that scales to zero |
+| Migrations | at boot | run manually before deploying |
+| Connection pool | 5 + 5 overflow | 1, no overflow |
+| Max upload | 8 MB | 4 MB (platform caps bodies at 4.5 MB) |
+
+Vercel ignores the `Dockerfile`: its container path looks for `Dockerfile.vercel`
+at the repo root, which this repo does not have, so the two platforms never
+contend for the same file.
 
 ### Render (recommended — free tier works)
 
@@ -312,6 +323,55 @@ The free plan sleeps after ~15 idle minutes, so the first request after a pause
 takes a few extra seconds while the container boots and re-runs migrations. That
 is harmless: migrations are idempotent and run under a Postgres advisory lock, so
 concurrent boots cannot collide.
+
+### Vercel
+
+Runs on the native Python runtime, so there is no image and no `Dockerfile` in
+the path. `vercel.json` pins the region and duration; `pyproject.toml` names the
+entrypoint.
+
+```bash
+vercel link          # once, to bind this directory to a project
+alembic upgrade head # migrations are NOT run at boot here — see below
+vercel deploy --prod
+```
+
+`vercel dev` runs it locally with the same routing and env wiring.
+
+**Migrations are a manual step on Vercel, deliberately.** A function that scales
+to zero re-runs its boot hook on the first request after every idle period, which
+would put twelve migrations and an advisory-lock round trip in front of requests
+that do not need them — and make Supabase's pooler the ceiling on concurrency. So
+`RUN_MIGRATIONS_ON_BOOT=0` there and you run `alembic upgrade head` yourself
+first. Render keeps it on: one container, one boot, free thereafter.
+
+A failed migration at boot is **logged, not raised**, on both platforms. Boot is
+where a transient database blip is most likely to land, and raising there means
+every subsequent request 500s too.
+
+Set these in the Vercel dashboard (Settings → Environment Variables):
+
+| Key | Value | Why |
+|---|---|---|
+| `DATABASE_URL` | the session pooler URI | see the Render section above for the full form |
+| `SESSION_SECRET_KEY` | generate one | the app refuses to boot without a non-default |
+| `LLM_API_KEY` | your provider key | |
+| `SESSION_HTTPS_ONLY` | `1` | **Vercel does not use the Dockerfile**, which is the only place this is set on Render. It defaults to off, so session cookies would otherwise go out over plaintext. |
+| `RUN_MIGRATIONS_ON_BOOT` | `0` | see above |
+| `DB_POOL_SIZE` | `1` | every concurrent invocation is its own process |
+| `DB_POOL_MAX_OVERFLOW` | `0` | so 20 simultaneous users do not ask the pooler for 200 connections |
+| `MAX_UPLOAD_BYTES` | `4194304` | Vercel rejects bodies over 4.5 MB before the app sees them; 4 MB leaves room for the multipart envelope |
+| `DB_APP_ROLE` | `launchloop_app` | see RLS below |
+| `APP_BASE_URL` | your Vercel URL | every link in every email is built from this |
+
+`vercel.json` sets `regions: ["bom1"]` — Mumbai, `ap-south-1`, matching an
+`aws-0-ap-south-1` Supabase pooler. Vercel's default is Washington D.C., which
+would put a trans-Pacific round trip in front of every query.
+
+`maxDuration: 300` is the floor that works, not a comfort setting: a single
+request can spend `LLM_TIMEOUT` × `LLM_MAX_ATTEMPTS` plus backoff, which is 186
+seconds at the shipped defaults. Raising either of those without raising this
+means 504s mid-verdict.
 
 ### Enabling row-level security (one manual step)
 
@@ -412,7 +472,7 @@ pg_dump "$DATABASE_URL" -Fc -f launchloop-$(date +%F).dump
   left. A passed block shows its extracted answer as the headline — the value
   proposition for Value Propositions, the segment for Customer Segments — with
   the supporting evidence in smaller type beneath.
-- `tests/` — 437 tests. `tests/test_launchloop.py` covers the state machine,
+- `tests/` — 460 tests. `tests/test_launchloop.py` covers the state machine,
   LLM output validation, caps, isolation, auth, quota, the call log, rendering,
   provider failure, identifier import, action-plan tracking, session revocation,
   duplicate detection and mentor challenges; `tests/test_frontend.py` guards the two ways the front
@@ -505,6 +565,18 @@ marked `confirmed` come back as `passed`, so existing work is not thrown away.
 
 ## Known rough edges (MVP, not production)
 
+- **Vercel has a 4 MB upload ceiling** against Render's 8 MB, because Vercel
+  rejects any request body over 4.5 MB before the app runs. Same code, smaller
+  limit, set per platform. A researcher with a 6 MB PDF is served by Render and
+  refused by Vercel.
+- **Vercel migrations are a manual pre-deploy step** (`alembic upgrade head`).
+  That is the trade for not re-running twelve migrations on the first request
+  after every idle period, but it means a deploy is not self-contained — forget
+  the step and the app runs against the previous schema.
+- **Vercel cold starts are paid on the first request after an idle period**,
+  because the native runtime imports `psycopg[binary]`, `openai`, `pypdf` and
+  `python-docx` at module load. The container path would avoid this at the cost
+  of Active CPU billing instead of the free tier.
 - **Password reset works**, but email is sent through the `console` backend by
   default, which prints the link to stdout. A real deployment must set
   `MAIL_BACKEND=smtp` and `APP_BASE_URL`, or researchers get no mail at all —

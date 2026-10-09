@@ -20,6 +20,7 @@ from urllib.parse import quote, unquote
 from sqlalchemy import case, create_engine, func, insert, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Engine
+from sqlalchemy.pool import NullPool
 
 from . import config
 from .constants import (
@@ -147,14 +148,20 @@ def get_engine() -> Engine:
     """Built once per process and reused; the pool is what makes this cheap."""
     global _engine
     if _engine is None:
-        _engine = create_engine(
-            database_url(),
-            pool_pre_ping=True,      # drop connections killed by the pooler
-            pool_recycle=1800,       # stay under the pooler's idle timeout
-            pool_size=5,
-            max_overflow=5,
-            future=True,
-        )
+        # Pool shape is per-platform, not per-code: 5/5 on Render's single
+        # long-lived container, 1/0 on Vercel where every concurrent invocation
+        # is its own process. See config.db_pool_size().
+        pool_size = config.db_pool_size()
+        kwargs = dict(future=True, pool_pre_ping=True, pool_recycle=1800)
+        if pool_size == 0:
+            # SQLAlchemy requires a real pool class; this is the documented way to
+            # open and close a connection per checkout, which is what "no pool"
+            # means for a serverless invocation.
+            kwargs["poolclass"] = NullPool
+        else:
+            kwargs["pool_size"] = pool_size
+            kwargs["max_overflow"] = config.db_pool_max_overflow()
+        _engine = create_engine(database_url(), **kwargs)
     return _engine
 
 

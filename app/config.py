@@ -316,6 +316,42 @@ def db_app_role() -> str:
     return _str("DB_APP_ROLE", "launchloop_app")
 
 
+def db_pool_size() -> int:
+    """Pooled connections per process.
+
+    The default suits a long-lived process (Render's single container), which
+    reuses the same connections across requests. Serverless is the opposite shape:
+    a function scales to zero and each concurrent invocation is its own process,
+    so a pool is connections held for nobody. Vercel therefore sets this to 1
+    with db_pool_max_overflow() at 0 — twenty simultaneous users would otherwise
+    ask Supabase's pooler for up to two hundred connections and be refused.
+    """
+    return _int("DB_POOL_SIZE", 5, low=0, high=100)
+
+
+def db_pool_max_overflow() -> int:
+    """Burst connections above db_pool_size(). 0 on serverless, for the reason
+    given on db_pool_size()."""
+    return _int("DB_POOL_MAX_OVERFLOW", 5, low=0, high=100)
+
+
+def run_migrations_on_boot() -> bool:
+    """Whether the lifespan hook applies Alembic migrations at boot.
+
+    On by default, which is what Render wants: one long-lived container, one
+    boot, one `alembic upgrade head` that costs nothing after the first.
+
+    Serverless turns it off. A function that scales to zero re-runs migrations on
+    the first request of every idle period, putting twelve migrations and an
+    advisory-lock round trip in front of requests that do not need them — and
+    making the Supabase pooler's connection count the ceiling on concurrency.
+    Deploy with RUN_MIGRATIONS_ON_BOOT=0 and run `alembic upgrade head` yourself
+    first; the flag exists so the two platforms share one image and one code path
+    without either paying for the other's shape.
+    """
+    return _bool("RUN_MIGRATIONS_ON_BOOT", True)
+
+
 # ---------------------------------------------------------------------------
 # Deliberately NOT configurable, and why
 #

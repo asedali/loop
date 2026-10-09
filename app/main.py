@@ -47,7 +47,22 @@ SESSION_HTTPS_ONLY = config.SESSION_HTTPS_ONLY
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    db.init_db()
+    # Migrations on boot suit a long-lived process (Render's single container):
+    # one boot, one upgrade, free thereafter. Serverless re-runs this on the first
+    # request of every idle period, so it is skipped there — deploy with
+    # RUN_MIGRATIONS_ON_BOOT=0 after running `alembic upgrade head` yourself.
+    #
+    # A failure is logged rather than raised either way. Boot is where a transient
+    # database blip is most likely to land, and taking the whole app down for it
+    # means every later request 500s too, where continuing lets the schema check
+    # recover on its own.
+    if config.run_migrations_on_boot():
+        try:
+            db.init_db()
+        except Exception as exc:
+            print(f"[boot] migration on boot FAILED: {exc!r}")
+    else:
+        print("[boot] migrations skipped (RUN_MIGRATIONS_ON_BOOT=0)")
     # Name the NOBYPASSRLS role so get_conn() switches to it and the RLS policies
     # actually apply. Without this the connection stays as whatever
     # DATABASE_URL says — which on Supabase is service_role, and service_role

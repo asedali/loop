@@ -33,7 +33,8 @@ quota without a recorded call, and never persists an enum value it invented.
 | Web framework | FastAPI 0.115 / Starlette 0.38 (sync route handlers, Jinja2 templates) |
 | Templates | Jinja2, server-rendered; no client framework |
 | Database | PostgreSQL via SQLAlchemy 2.1 **Core** + psycopg3. No ORM models |
-| Migrations | Alembic, run on boot under an advisory lock |
+| Migrations | Alembic, run on boot under an advisory lock (off on Vercel — see §8) |
+| Deploy targets | Render (Docker) and Vercel (native Python), one codebase — see §8 |
 | Auth | `bcrypt` directly + Starlette `SessionMiddleware` (itsdangerous signed cookie) |
 | LLM | `openai` 1.51 SDK against any OpenAI-SDK-shaped endpoint |
 | Outbound HTTP | `httpx` 0.28, one GET per import, redirects disabled |
@@ -1093,6 +1094,40 @@ has now bitten twice, which is why it is written down.
 `SOURCE_IMPORT_ENABLED=false` turns off every outbound third-party call and hides
 the import box — for a deployment that must not phone home, or a demo where it
 should not.
+
+### Two platforms, one codebase
+
+Render and Vercel differ in **process lifetime**, and that single difference
+produces every platform-specific setting in this app. Render runs one
+long-lived container for the life of a deploy; a Vercel function scales to zero
+and each concurrent invocation is its own process.
+
+| Setting | Render | Vercel | Why |
+|---|---|---|---|
+| `DB_POOL_SIZE` | 5 | 1 | a pool is connections held for nobody when there is no persistent process |
+| `DB_POOL_MAX_OVERFLOW` | 5 | 0 | 20 concurrent users × 10 connections would exhaust Supabase's pooler |
+| `RUN_MIGRATIONS_ON_BOOT` | 1 | 0 | a cold function would re-run twelve migrations per idle period |
+| `MAX_UPLOAD_BYTES` | 8388608 | 4194304 | Vercel rejects bodies over 4.5 MB before the app runs |
+
+`DB_POOL_SIZE=0` selects SQLAlchemy's `NullPool` — connect on checkout, close on
+return. It is *not* the same as `pool_size=0`, which is a valid but useless
+one-connection pool that would serialise concurrent requests; `get_engine()`
+therefore branches on the class rather than passing the number through.
+
+`RUN_MIGRATIONS_ON_BOOT=0` means a Vercel deploy is not self-contained: run
+`alembic upgrade head` first, or the app serves the previous schema. That is the
+deliberate trade for not putting migrations in front of every cold request.
+
+**A failed boot migration is logged, not raised.** Boot is where a transient
+database blip is most likely to land, and raising there means the schema never
+gets its chance to recover — every later request 500s too.
+
+The `Dockerfile` is Render's and Vercel's does not touch it: Vercel's container
+path looks for `Dockerfile.vercel` at the repo root, which this repo does not
+have, so there is one image definition and it is unambiguous which platform uses
+it. Note that `SESSION_HTTPS_ONLY=1` is set as an `ENV` in that Dockerfile, so
+**Vercel deployments must set it as an environment variable** — it defaults off,
+and nothing else turns it on outside the image.
 
 ### Deliberately not configurable
 

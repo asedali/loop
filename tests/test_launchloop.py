@@ -2708,6 +2708,102 @@ class TestRowLevelSecurity:
             assert "row-level security" in str(exc.value).lower()
 
 
+class TestDeployShape:
+    """Per-platform knobs, and why the defaults suit the platform they suit.
+
+    One codebase runs on Render and Vercel, which differ in process lifetime: a
+    single long-lived container versus a function that scales to zero. These are
+    the two places that difference actually bites — connection pooling and
+    whether migrations run at boot.
+    """
+
+    def test_pool_defaults_suit_a_long_lived_process(self, monkeypatch):
+        """Render runs one container for the life of the deploy, so it reuses the
+        same connections. These are the defaults because that is what they are for.
+        """
+        monkeypatch.delenv("DB_POOL_SIZE", raising=False)
+        monkeypatch.delenv("DB_POOL_MAX_OVERFLOW", raising=False)
+        assert config.db_pool_size() == 5
+        assert config.db_pool_max_overflow() == 5
+
+    def test_pool_reads_the_env(self, monkeypatch):
+        monkeypatch.setenv("DB_POOL_SIZE", "1")
+        monkeypatch.setenv("DB_POOL_MAX_OVERFLOW", "0")
+        assert config.db_pool_size() == 1
+        assert config.db_pool_max_overflow() == 0
+
+    def test_junk_pool_size_falls_back_rather_than_raising(self, monkeypatch):
+        """_int degrades an out-of-range value to the default. A typo'd pool size
+        must not become a zero-byte pool that refuses every connection.
+        """
+        monkeypatch.setenv("DB_POOL_SIZE", "banana")
+        assert config.db_pool_size() == 5
+
+    def test_pool_zero_means_no_pooling(self, monkeypatch):
+        """DB_POOL_SIZE=0 selects NullPool — connect on checkout, close on return.
+
+        That is what "no pool" means for a serverless invocation, and it is not
+        the same as pool_size=0 in SQLAlchemy, which is a valid but useless
+        one-connection pool that would serialise concurrent requests.
+
+        The engine is built but never connects: create_engine is lazy, so this
+        asserts the pool *choice* without needing a live database.
+        """
+        monkeypatch.setenv("DB_POOL_SIZE", "0")
+        monkeypatch.setenv("DATABASE_URL", "postgresql://u:p@localhost:5432/db")
+        captured = {}
+        real = db.create_engine
+
+        def spy(url, **kwargs):
+            captured.update(kwargs)
+            return real(url, **kwargs)
+
+        monkeypatch.setattr(db, "create_engine", spy)
+        previous, db._engine = db._engine, None
+        try:
+            engine = db.get_engine()
+            assert captured["poolclass"] is db.NullPool
+            assert "pool_size" not in captured
+            assert isinstance(engine.pool, db.NullPool)
+        finally:
+            # Restore the per-test schema's engine rather than clearing it, so a
+            # later test in this class does not find the engine gone.
+            db._engine = previous
+            engine.dispose()
+
+    def test_migrations_run_at_boot_by_default(self, monkeypatch):
+        """Render's single container wants this on: one boot, one upgrade."""
+        monkeypatch.delenv("RUN_MIGRATIONS_ON_BOOT", raising=False)
+        assert config.run_migrations_on_boot() is True
+
+    def test_boot_migrations_can_be_turned_off_for_serverless(self, monkeypatch):
+        """A function that scales to zero would otherwise re-run every migration on
+        the first request of each idle period.
+        """
+        monkeypatch.setenv("RUN_MIGRATIONS_ON_BOOT", "0")
+        assert config.run_migrations_on_boot() is False
+
+    def test_a_failed_boot_migration_does_not_take_the_app_down(self, monkeypatch):
+        """Boot is where a transient database blip is most likely to land.
+
+        Raising would mean every later request 500s too, because the schema never
+        gets its chance to recover. Logging and continuing lets it self-heal.
+        """
+        def boom():
+            raise RuntimeError("could not connect to server")
+
+        monkeypatch.setattr(db, "init_db", boom)
+        monkeypatch.setenv("RUN_MIGRATIONS_ON_BOOT", "1")
+        import app.main as main_mod
+        import anyio
+
+        async def run():
+            async with main_mod.lifespan(main_mod.app):
+                return True
+
+        assert anyio.run(run) is True
+
+
 class TestTenantContext:
     """The ContextVar that carries the tenant is the mechanism the whole thing
     rests on, and a concurrency risk besides — so its properties are asserted
