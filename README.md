@@ -327,8 +327,15 @@ concurrent boots cannot collide.
 ### Vercel
 
 Runs on the native Python runtime, so there is no image and no `Dockerfile` in
-the path. `vercel.json` pins the region and duration; `pyproject.toml` names the
-entrypoint.
+the path. `vercel.json` pins the region and duration, and dependencies come from
+`requirements.txt` — the same file the Dockerfile installs, so there is exactly
+one list of what this app needs.
+
+There is deliberately **no `pyproject.toml`**. Its mere presence makes Vercel
+prefer it over `requirements.txt` and then run `uv lock`, which requires a PEP 621
+`[project]` table this repo has no reason to maintain — and the build fails with
+`No 'project' table found`. The pytest config that used to live there is now in
+`pytest.ini`.
 
 ```bash
 vercel link          # once, to bind this directory to a project
