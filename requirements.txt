@@ -5,7 +5,15 @@ jinja2==3.1.4
 python-multipart==0.0.9
 bcrypt==4.2.0
 itsdangerous==2.2.0
-openai==1.51.0
+# httpx 0.28 (pinned below) removed the `proxies` argument that openai 1.x passes
+# to httpx.Client.__init__, so any openai older than 1.55.4 dies at client
+# construction with:
+#   TypeError: Client.__init__() got an unexpected keyword argument 'proxies'
+# That is a 500 on every LLM route, before a single byte leaves the process, and
+# it reads like an httpx bug rather than a version skew. The test suite does not
+# catch it: all 18 call sites monkeypatch llm._get_client, so nothing constructs
+# a real client. tests/test_launchloop.py::TestLLMClientCompatibility does.
+openai==3.17.0
 python-dotenv==1.0.1
 
 # Phase 1 file upload (M1.1). Both parse in-process; see app/upload.py for why
@@ -17,6 +25,11 @@ python-docx==1.1.2
 # Phase 1 identifier import (M1.2) — the three outbound GETs to ORCID, Crossref
 # and arXiv. Was a tests-only pin before app code needed it; it is a runtime
 # dependency now, so it belongs here and the dev file inherits it.
+#
+# 0.28 is the floor for openai>=1.55.4. Rolling this back below 0.28 to suit an
+# older openai would work too, but it is the wrong direction: it would undo the
+# security and correctness fixes in 0.28 for app/sources.py, which does its own
+# outbound GETs. Raise the openai pin instead — see above.
 httpx==0.28.1
 
 # database

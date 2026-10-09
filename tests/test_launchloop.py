@@ -1372,6 +1372,85 @@ def fake_client_msg(message):
     return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
 
 
+class TestLLMClientCompatibility:
+    """The installed openai and httpx have to be able to construct a client.
+
+    Every other test in this file monkeypatches `llm._get_client`, so nothing
+    else exercises the real constructor. That gap hid a production-only 500: with
+    openai 1.51.0 pinned alongside httpx 0.28.1, `OpenAI(...)` raised
+
+        TypeError: Client.__init__() got an unexpected keyword argument 'proxies'
+
+    on every LLM route, before any network call, because openai 1.x passes
+    `proxies` to httpx.Client and httpx 0.28 removed it. The local venv had
+    openai 3.17.0, so the suite passed and only Vercel broke.
+
+    No test here makes a network request. `_get_client` is called directly and
+    its result inspected.
+    """
+
+    def test_a_real_client_can_be_constructed(self, monkeypatch):
+        """The regression itself: constructing must not raise."""
+        monkeypatch.setenv("LLM_API_KEY", "test-key-not-a-real-one")
+        monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+        monkeypatch.setenv("LLM_MODEL", "some-model")
+        llm._client_cache.clear()
+        try:
+            client = llm._get_client(llm.get_settings())
+            assert client is not None
+            assert callable(client.chat.completions.create)
+        finally:
+            llm._client_cache.clear()
+
+    def test_the_sdk_surface_the_app_uses_exists(self, monkeypatch):
+        """A version bump is only safe if the three attributes app/llm.py touches
+        are still there: chat.completions.create, and on the response
+        .choices[0].finish_reason, .choices[0].message and .usage."""
+        monkeypatch.setenv("LLM_API_KEY", "test-key-not-a-real-one")
+        monkeypatch.setenv("LLM_BASE_URL", "https://example.invalid/v1")
+        llm._client_cache.clear()
+        try:
+            client = llm._get_client(llm.get_settings())
+        finally:
+            llm._client_cache.clear()
+        assert hasattr(client.chat.completions, "create")
+
+    def test_installed_openai_matches_the_requirements_pin(self):
+        """Catches venv drift in the other direction.
+
+        A local environment that has quietly upgraded openai will happily run the
+        whole suite green against a pin production cannot build. Comparing the
+        installed version to the file is the only way to notice.
+        """
+        import importlib.metadata as md
+        import re
+        pin = None
+        for line in pathlib.Path(config.PROJECT_ROOT / "requirements.txt").read_text().splitlines():
+            line = line.strip()
+            if line.startswith("openai=="):
+                pin = line.split("==", 1)[1].strip()
+                break
+        assert pin, "no openai== pin in requirements.txt"
+        assert md.version("openai") == pin, (
+            f"installed openai is {md.version('openai')}, requirements.txt pins "
+            f"{pin}. Production installs the pin, so a drift here means the tests "
+            f"are validating a version that never ships."
+        )
+
+    def test_the_dev_requirements_pin_matches_the_runtime_pin(self):
+        """requirements-dev.txt was left behind at openai 1.51.0 while the runtime
+        pin moved, so a fresh dev install reproduced a bug the local venv hid."""
+        def pin(text):
+            m = re.search(r"^openai==(\S+)", text, re.M)
+            return m.group(1) if m else None
+
+        dev = pathlib.Path(config.PROJECT_ROOT / "requirements-dev.txt").read_text()
+        runtime = pathlib.Path(config.PROJECT_ROOT / "requirements.txt").read_text()
+        assert pin(dev) == pin(runtime), (
+            f"dev pins openai=={pin(dev)}, runtime pins openai=={pin(runtime)}"
+        )
+
+
 class TestCallLog:
     def test_successful_call_is_recorded_with_tokens_and_model(self, tmp_db, monkeypatch):
         monkeypatch.setenv("LLM_API_KEY", "k")

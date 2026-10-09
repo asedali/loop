@@ -31,7 +31,7 @@ follow the reader's light/dark theme and need no tooling to regenerate.
 
 Working prototype, deployed-shaped, not production-hardened. The whole three-phase
 flow works, per-block validation is the default, and the suite is green
-(**460 tests**, `pytest -q`).
+(**464 tests**, `pytest -q`).
 
 What that means in practice:
 
@@ -129,7 +129,7 @@ Phase 2 → open a canvas block → run a cycle → log results → repeat until
 
 ```bash
 createdb launchloop_test
-pytest -q            # 460 tests, ~8m
+pytest -q            # 464 tests, ~7m
 ```
 
 They need a Postgres but no network. Each test gets its own schema, built by
@@ -479,7 +479,7 @@ pg_dump "$DATABASE_URL" -Fc -f launchloop-$(date +%F).dump
   left. A passed block shows its extracted answer as the headline — the value
   proposition for Value Propositions, the segment for Customer Segments — with
   the supporting evidence in smaller type beneath.
-- `tests/` — 460 tests. `tests/test_launchloop.py` covers the state machine,
+- `tests/` — 464 tests. `tests/test_launchloop.py` covers the state machine,
   LLM output validation, caps, isolation, auth, quota, the call log, rendering,
   provider failure, identifier import, action-plan tracking, session revocation,
   duplicate detection and mentor challenges; `tests/test_frontend.py` guards the two ways the front
